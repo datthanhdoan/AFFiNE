@@ -593,4 +593,11 @@ export const USER_FRIENDLY_ERRORS = {
     type: 'bad_request',
     message: 'Captcha verification failed.',
   },
+  // version errors
+  unsupported_client_version: {
+    type: 'action_forbidden',
+    args: { minVersion: 'string' },
+    message: ({ minVersion }) =>
+      `Unsupported client version. Please upgrade to ${minVersion}.`,
+  },
 } satisfies Record<string, UserFriendlyErrorOptions>;

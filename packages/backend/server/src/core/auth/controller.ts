@@ -103,7 +103,7 @@ export class AuthController {
   }
 
   @Public()
-  @UseNamedGuard('captcha')
+  @UseNamedGuard('version', 'captcha')
   @Post('/sign-in')
   @Header('content-type', 'application/json')
   async signIn(
