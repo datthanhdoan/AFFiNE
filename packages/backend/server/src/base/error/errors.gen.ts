@@ -593,7 +593,9 @@ export class CaptchaVerificationFailed extends UserFriendlyError {
 }
 @ObjectType()
 class UnsupportedClientVersionDataType {
-  @Field() minVersion!: string
+  @Field() clientVersion!: string
+  @Field() recommendedVersion!: string
+  @Field() action!: string
 }
 
 export class UnsupportedClientVersion extends UserFriendlyError {

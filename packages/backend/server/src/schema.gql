@@ -866,7 +866,9 @@ type UnknownOauthProviderDataType {
 }
 
 type UnsupportedClientVersionDataType {
-  minVersion: String!
+  action: String!
+  clientVersion: String!
+  recommendedVersion: String!
 }
 
 type UnsupportedSubscriptionPlanDataType {

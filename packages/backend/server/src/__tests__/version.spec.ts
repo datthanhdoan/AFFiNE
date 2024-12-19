@@ -40,9 +40,9 @@ test.beforeEach(async t => {
   await initTestingDB(t.context.app.get(PrismaClient));
   // reset runtime
   await t.context.runtime.loadDb('version/enable');
-  await t.context.runtime.loadDb('version/minVersion');
+  await t.context.runtime.loadDb('version/allowedVersion');
   await t.context.runtime.set('version/enable', false);
-  await t.context.runtime.set('version/minVersion', '0.0.0');
+  await t.context.runtime.set('version/allowedVersion', '>=0.0.1');
 });
 
 test.after.always(async t => {
@@ -80,46 +80,138 @@ test('should be able to prevent requests if version outdated', async t => {
     await runtime.set('version/enable', true);
     await t.throwsAsync(
       fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.FORBIDDEN),
-      { message: 'Unsupported client version. Please upgrade to 0.0.0.' },
+      {
+        message:
+          'Unsupported client version: [Not Provided], please upgrade to 0.0.1.',
+      },
+      'should check version exists'
+    );
+    await t.throwsAsync(
+      fetchWithVersion(
+        app.getHttpServer(),
+        'not_a_version',
+        HttpStatus.FORBIDDEN
+      ),
+      {
+        message:
+          'Unsupported client version: not_a_version, please upgrade to 0.0.1.',
+      },
       'should check version exists'
     );
     await t.notThrowsAsync(
-      fetchWithVersion(app.getHttpServer(), '0.0.0', HttpStatus.OK),
+      fetchWithVersion(app.getHttpServer(), '0.0.1', HttpStatus.OK),
       'should check version exists'
     );
   }
 
   {
-    await runtime.set('version/minVersion', 'unknownVersion');
+    await runtime.set('version/allowedVersion', 'unknownVersion');
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.OK),
       'should not check version if invalid minVersion provided'
     );
     await t.notThrowsAsync(
-      fetchWithVersion(app.getHttpServer(), '0.0.0', HttpStatus.OK),
+      fetchWithVersion(app.getHttpServer(), '0.0.1', HttpStatus.OK),
       'should not check version if invalid minVersion provided'
     );
 
-    await runtime.set('version/minVersion', '0.0.1');
+    await runtime.set('version/allowedVersion', '0.0.1');
     await t.throwsAsync(
       fetchWithVersion(app.getHttpServer(), '0.0.0', HttpStatus.FORBIDDEN),
-      { message: 'Unsupported client version. Please upgrade to 0.0.1.' },
+      {
+        message: 'Unsupported client version: 0.0.0, please upgrade to 0.0.1.',
+      },
       'should reject version if valid minVersion provided'
     );
 
-    await runtime.set('version/minVersion', '0.0.5 || >=0.0.7');
+    await runtime.set(
+      'version/allowedVersion',
+      '0.17.5 || >=0.18.0-nightly || >=0.18.0'
+    );
     await t.notThrowsAsync(
-      fetchWithVersion(app.getHttpServer(), '0.0.5', HttpStatus.OK),
+      fetchWithVersion(app.getHttpServer(), '0.17.5', HttpStatus.OK),
       'should pass version if version satisfies minVersion'
     );
     await t.throwsAsync(
-      fetchWithVersion(app.getHttpServer(), '0.0.6', HttpStatus.FORBIDDEN),
-      { message: 'Unsupported client version. Please upgrade to 0.0.7.' },
+      fetchWithVersion(app.getHttpServer(), '0.17.4', HttpStatus.FORBIDDEN),
+      {
+        message:
+          'Unsupported client version: 0.17.4, please upgrade to 0.18.0.',
+      },
+      'should reject version if valid minVersion provided'
+    );
+    await t.throwsAsync(
+      fetchWithVersion(
+        app.getHttpServer(),
+        '0.17.6-nightly-f0d99f4',
+        HttpStatus.FORBIDDEN
+      ),
+      {
+        message:
+          'Unsupported client version: 0.17.6-nightly-f0d99f4, please upgrade to 0.18.0.',
+      },
       'should reject version if valid minVersion provided'
     );
     await t.notThrowsAsync(
-      fetchWithVersion(app.getHttpServer(), '0.1.0', HttpStatus.OK),
+      fetchWithVersion(
+        app.getHttpServer(),
+        '0.18.0-nightly-cc9b38c',
+        HttpStatus.OK
+      ),
       'should pass version if version satisfies minVersion'
+    );
+    await t.notThrowsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.18.1', HttpStatus.OK),
+      'should pass version if version satisfies minVersion'
+    );
+  }
+
+  {
+    await runtime.set(
+      'version/allowedVersion',
+      '>=0.0.1 <=0.1.2 || ^0.2.0-nightly <0.2.0 || 0.3.0'
+    );
+
+    await t.notThrowsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.0.1', HttpStatus.OK),
+      'should pass version if version satisfies minVersion'
+    );
+    await t.notThrowsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.1.2', HttpStatus.OK),
+      'should pass version if version satisfies maxVersion'
+    );
+    await t.throwsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.1.3', HttpStatus.FORBIDDEN),
+      {
+        message: 'Unsupported client version: 0.1.3, please upgrade to 0.3.0.',
+      },
+      'should reject version if valid maxVersion provided'
+    );
+
+    await t.notThrowsAsync(
+      fetchWithVersion(
+        app.getHttpServer(),
+        '0.2.0-nightly-cc9b38c',
+        HttpStatus.OK
+      ),
+      'should pass version if version satisfies maxVersion'
+    );
+
+    await t.throwsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.2.0', HttpStatus.FORBIDDEN),
+      {
+        message: 'Unsupported client version: 0.2.0, please upgrade to 0.3.0.',
+      },
+      'should reject version if valid maxVersion provided'
+    );
+
+    await t.throwsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.3.1', HttpStatus.FORBIDDEN),
+      {
+        message:
+          'Unsupported client version: 0.3.1, please downgrade to 0.3.0.',
+      },
+      'should reject version if valid maxVersion provided'
     );
   }
 });

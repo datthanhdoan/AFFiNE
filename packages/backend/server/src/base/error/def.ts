@@ -596,8 +596,12 @@ export const USER_FRIENDLY_ERRORS = {
   // version errors
   unsupported_client_version: {
     type: 'action_forbidden',
-    args: { minVersion: 'string' },
-    message: ({ minVersion }) =>
-      `Unsupported client version. Please upgrade to ${minVersion}.`,
+    args: {
+      clientVersion: 'string',
+      recommendedVersion: 'string',
+      action: 'string',
+    },
+    message: ({ clientVersion, recommendedVersion, action }) =>
+      `Unsupported client version: ${clientVersion}, please ${action} to ${recommendedVersion}.`,
   },
 } satisfies Record<string, UserFriendlyErrorOptions>;

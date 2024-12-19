@@ -11,38 +11,46 @@ export class VersionService {
 
   constructor(private readonly runtime: Runtime) {}
 
-  private async getRecommendedVersion(minVersion: string) {
+  private async getRecommendedVersion(versionRange: string) {
     try {
-      const range = new semver.Range(minVersion);
+      const range = new semver.Range(versionRange);
       const versions = range.set
         .flat()
         .map(c => c.semver)
         .toSorted((a, b) => semver.rcompare(a, b));
       return versions[0]?.toString();
     } catch {
-      return semver.valid(semver.coerce(minVersion));
+      return semver.valid(semver.coerce(versionRange));
     }
   }
 
   async checkVersion(clientVersion?: any) {
-    const minVersion = await this.runtime.fetch('version/minVersion');
-    const readableMinVersion = await this.getRecommendedVersion(minVersion);
-    if (!minVersion || !readableMinVersion) {
-      // ignore invalid min version config
+    const allowedVersion = await this.runtime.fetch('version/allowedVersion');
+    const recommendedVersion = await this.getRecommendedVersion(allowedVersion);
+    if (!allowedVersion || !recommendedVersion) {
+      // ignore invalid allowed version config
       return true;
     }
 
+    const parsedClientVersion = semver.valid(clientVersion);
+    const action = semver.lt(parsedClientVersion || '0.0.0', recommendedVersion)
+      ? 'upgrade'
+      : 'downgrade';
     assert(
       typeof clientVersion === 'string' && clientVersion.length > 0,
       new UnsupportedClientVersion({
-        minVersion: readableMinVersion,
+        clientVersion: '[Not Provided]',
+        recommendedVersion,
+        action,
       })
     );
 
-    if (semver.valid(clientVersion)) {
-      if (!semver.satisfies(clientVersion, minVersion)) {
+    if (parsedClientVersion) {
+      if (!semver.satisfies(parsedClientVersion, allowedVersion)) {
         throw new UnsupportedClientVersion({
-          minVersion: readableMinVersion,
+          clientVersion,
+          recommendedVersion,
+          action,
         });
       }
       return true;
@@ -51,7 +59,9 @@ export class VersionService {
         this.logger.warn(`Invalid client version: ${clientVersion}`);
       }
       throw new UnsupportedClientVersion({
-        minVersion: readableMinVersion,
+        clientVersion,
+        recommendedVersion,
+        action,
       });
     }
   }

@@ -2,7 +2,7 @@ import { defineRuntimeConfig, ModuleConfig } from '../../base/config';
 
 export interface VersionConfig {
   enable: boolean;
-  minVersion: string;
+  allowedVersion: string;
 }
 
 declare module '../../base/config' {
@@ -22,8 +22,8 @@ defineRuntimeConfig('version', {
     desc: 'Check version of the app',
     default: false,
   },
-  minVersion: {
-    desc: 'Minimum version of the app that can access the server',
-    default: '0.0.0',
+  allowedVersion: {
+    desc: 'Allowed version range of the app that can access the server',
+    default: '>=0.0.1',
   },
 });
