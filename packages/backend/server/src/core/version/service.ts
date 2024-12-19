@@ -11,9 +11,7 @@ export class VersionService {
 
   constructor(private readonly runtime: Runtime) {}
 
-  private async getRecommendedVersion() {
-    const minVersion = await this.runtime.fetch('version/minVersion');
-
+  private async getRecommendedVersion(minVersion: string) {
     try {
       const range = new semver.Range(minVersion);
       const versions = range.set
@@ -27,8 +25,9 @@ export class VersionService {
   }
 
   async checkVersion(clientVersion?: any) {
-    const readableMinVersion = await this.getRecommendedVersion();
-    if (!readableMinVersion) {
+    const minVersion = await this.runtime.fetch('version/minVersion');
+    const readableMinVersion = await this.getRecommendedVersion(minVersion);
+    if (!minVersion || !readableMinVersion) {
       // ignore invalid min version config
       return true;
     }
@@ -41,7 +40,7 @@ export class VersionService {
     );
 
     if (semver.valid(clientVersion)) {
-      if (!semver.satisfies(clientVersion, readableMinVersion)) {
+      if (!semver.satisfies(clientVersion, minVersion)) {
         throw new UnsupportedClientVersion({
           minVersion: readableMinVersion,
         });
