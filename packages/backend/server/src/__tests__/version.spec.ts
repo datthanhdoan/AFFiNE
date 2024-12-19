@@ -7,6 +7,7 @@ import request from 'supertest';
 
 import { AppModule } from '../app.module';
 import { Runtime, UseNamedGuard } from '../base';
+import { Public } from '../core/auth/guard';
 import { createTestingApp, initTestingDB } from './utils';
 
 const test = ava as TestFn<{
@@ -15,9 +16,10 @@ const test = ava as TestFn<{
   app: INestApplication;
 }>;
 
-@UseNamedGuard()
+@Public()
 @Controller('/guarded')
 class GuardedController {
+  @UseNamedGuard('version')
   @Get('/test')
   test() {
     return 'test';
@@ -36,6 +38,11 @@ test.before(async t => {
 
 test.beforeEach(async t => {
   await initTestingDB(t.context.app.get(PrismaClient));
+  // reset runtime
+  await t.context.runtime.loadDb('version/enable');
+  await t.context.runtime.loadDb('version/minVersion');
+  await t.context.runtime.set('version/enable', false);
+  await t.context.runtime.set('version/minVersion', '0.0.0');
 });
 
 test.after.always(async t => {
@@ -51,7 +58,11 @@ async function fetchWithVersion(
   if (version) {
     req = req.set({ 'x-affine-version': version });
   }
-  return req.expect(status);
+  const res = await req.expect(status);
+  if (res.body.message) {
+    throw new Error(res.body.message);
+  }
+  return res;
 }
 
 test('should be able to prevent requests if version outdated', async t => {
@@ -59,7 +70,7 @@ test('should be able to prevent requests if version outdated', async t => {
 
   {
     await runtime.set('version/enable', false);
-    t.notThrowsAsync(
+    await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.OK),
       'should not check version if disabled'
     );
@@ -67,23 +78,39 @@ test('should be able to prevent requests if version outdated', async t => {
 
   {
     await runtime.set('version/enable', true);
-    t.notThrowsAsync(
-      fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.OK),
-      'should not check version if disabled'
+    await t.throwsAsync(
+      fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.FORBIDDEN),
+      { message: 'Unsupported client version. Please upgrade to 0.0.0.' },
+      'should check version exists'
+    );
+    await t.notThrowsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.0.0', HttpStatus.OK),
+      'should check version exists'
     );
   }
 
   {
     await runtime.set('version/minVersion', 'unknownVersion');
-    t.notThrowsAsync(
+    await t.notThrowsAsync(
+      fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.OK),
+      'should not check version if invalid minVersion provided'
+    );
+    await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), '0.0.0', HttpStatus.OK),
       'should not check version if invalid minVersion provided'
     );
 
     await runtime.set('version/minVersion', '0.0.1');
-    t.throwsAsync(
+    await t.throwsAsync(
       fetchWithVersion(app.getHttpServer(), '0.0.0', HttpStatus.FORBIDDEN),
-      { message: 'Version outdated' },
+      { message: 'Unsupported client version. Please upgrade to 0.0.1.' },
+      'should check version if valid minVersion provided'
+    );
+
+    await runtime.set('version/minVersion', '0.0.5 || >=0.0.7');
+    await t.throwsAsync(
+      fetchWithVersion(app.getHttpServer(), '0.0.6', HttpStatus.FORBIDDEN),
+      { message: 'Unsupported client version. Please upgrade to 0.0.7.' },
       'should check version if valid minVersion provided'
     );
   }
