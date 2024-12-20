@@ -108,11 +108,11 @@ test('should be able to prevent requests if version outdated', async t => {
     await runtime.set('version/allowedVersion', 'unknownVersion');
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), undefined, HttpStatus.OK),
-      'should not check version if invalid minVersion provided'
+      'should not check version if invalid allowedVersion provided'
     );
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), '0.0.1', HttpStatus.OK),
-      'should not check version if invalid minVersion provided'
+      'should not check version if invalid allowedVersion provided'
     );
 
     await runtime.set('version/allowedVersion', '0.0.1');
@@ -121,7 +121,7 @@ test('should be able to prevent requests if version outdated', async t => {
       {
         message: 'Unsupported client version: 0.0.0, please upgrade to 0.0.1.',
       },
-      'should reject version if valid minVersion provided'
+      'should reject version if valid allowedVersion provided'
     );
 
     await runtime.set(
@@ -130,7 +130,7 @@ test('should be able to prevent requests if version outdated', async t => {
     );
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), '0.17.5', HttpStatus.OK),
-      'should pass version if version satisfies minVersion'
+      'should pass version if version satisfies allowedVersion'
     );
     await t.throwsAsync(
       fetchWithVersion(app.getHttpServer(), '0.17.4', HttpStatus.FORBIDDEN),
@@ -138,7 +138,7 @@ test('should be able to prevent requests if version outdated', async t => {
         message:
           'Unsupported client version: 0.17.4, please upgrade to 0.18.0.',
       },
-      'should reject version if valid minVersion provided'
+      'should reject version if valid allowedVersion provided'
     );
     await t.throwsAsync(
       fetchWithVersion(
@@ -150,7 +150,7 @@ test('should be able to prevent requests if version outdated', async t => {
         message:
           'Unsupported client version: 0.17.6-nightly-f0d99f4, please upgrade to 0.18.0.',
       },
-      'should reject version if valid minVersion provided'
+      'should reject version if valid allowedVersion provided'
     );
     await t.notThrowsAsync(
       fetchWithVersion(
@@ -158,11 +158,11 @@ test('should be able to prevent requests if version outdated', async t => {
         '0.18.0-nightly-cc9b38c',
         HttpStatus.OK
       ),
-      'should pass version if version satisfies minVersion'
+      'should pass version if version satisfies allowedVersion'
     );
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), '0.18.1', HttpStatus.OK),
-      'should pass version if version satisfies minVersion'
+      'should pass version if version satisfies allowedVersion'
     );
   }
 
@@ -174,18 +174,18 @@ test('should be able to prevent requests if version outdated', async t => {
 
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), '0.0.1', HttpStatus.OK),
-      'should pass version if version satisfies minVersion'
+      'should pass version if version satisfies allowedVersion'
     );
     await t.notThrowsAsync(
       fetchWithVersion(app.getHttpServer(), '0.1.2', HttpStatus.OK),
-      'should pass version if version satisfies maxVersion'
+      'should pass version if version satisfies allowedVersion'
     );
     await t.throwsAsync(
       fetchWithVersion(app.getHttpServer(), '0.1.3', HttpStatus.FORBIDDEN),
       {
         message: 'Unsupported client version: 0.1.3, please upgrade to 0.3.0.',
       },
-      'should reject version if valid maxVersion provided'
+      'should reject version if valid allowedVersion provided'
     );
 
     await t.notThrowsAsync(
@@ -194,7 +194,7 @@ test('should be able to prevent requests if version outdated', async t => {
         '0.2.0-nightly-cc9b38c',
         HttpStatus.OK
       ),
-      'should pass version if version satisfies maxVersion'
+      'should pass version if version satisfies allowedVersion'
     );
 
     await t.throwsAsync(
@@ -202,7 +202,7 @@ test('should be able to prevent requests if version outdated', async t => {
       {
         message: 'Unsupported client version: 0.2.0, please upgrade to 0.3.0.',
       },
-      'should reject version if valid maxVersion provided'
+      'should reject version if valid allowedVersion provided'
     );
 
     await t.throwsAsync(
@@ -211,7 +211,7 @@ test('should be able to prevent requests if version outdated', async t => {
         message:
           'Unsupported client version: 0.3.1, please downgrade to 0.3.0.',
       },
-      'should reject version if valid maxVersion provided'
+      'should reject version if valid allowedVersion provided'
     );
   }
 });

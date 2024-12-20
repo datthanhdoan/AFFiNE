@@ -35,6 +35,6 @@ export class VersionGuardProvider
 
     const version = req.headers['x-affine-version'];
 
-    return await this.version.checkVersion(version);
+    return this.version.checkVersion(version);
   }
 }
