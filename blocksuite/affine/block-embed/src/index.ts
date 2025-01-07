@@ -1,5 +1,9 @@
 import type { ExtensionType } from '@blocksuite/store';
 
+import {
+  builtinToolbarConfigForExternal,
+  builtinToolbarConfigForInternal,
+} from './configs/toolbar';
 import { EmbedFigmaBlockSpec } from './embed-figma-block';
 import { EmbedGithubBlockSpec } from './embed-github-block';
 import { EmbedHtmlBlockSpec } from './embed-html-block';
@@ -8,12 +12,17 @@ import { EmbedLoomBlockSpec } from './embed-loom-block';
 import { EmbedSyncedDocBlockSpec } from './embed-synced-doc-block';
 import { EmbedYoutubeBlockSpec } from './embed-youtube-block';
 
+console.log(builtinToolbarConfigForExternal, builtinToolbarConfigForInternal);
+
 export const EmbedExtensions: ExtensionType[] = [
+  // External embed blocks
   EmbedFigmaBlockSpec,
   EmbedGithubBlockSpec,
-  EmbedHtmlBlockSpec,
   EmbedLoomBlockSpec,
   EmbedYoutubeBlockSpec,
+
+  // Internal embed blocks
+  EmbedHtmlBlockSpec,
   EmbedLinkedDocBlockSpec,
   EmbedSyncedDocBlockSpec,
 ].flat();

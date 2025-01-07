@@ -10,6 +10,7 @@ import { EditorSettingService } from '@affine/core/modules/editor-setting';
 import { AppThemeService } from '@affine/core/modules/theme';
 import { mixpanel } from '@affine/track';
 import {
+  BlockFlavourIdentifier,
   ConfigExtension,
   LifeCycleWatcher,
   StdIdentifier,
@@ -35,6 +36,7 @@ import {
   SpecProvider,
   TelemetryProvider,
   ThemeExtensionIdentifier,
+  ToolbarModuleExtension,
 } from '@blocksuite/affine/blocks';
 import type { Container } from '@blocksuite/affine/global/di';
 import type { ExtensionType } from '@blocksuite/affine/store';
@@ -47,7 +49,10 @@ import { combineLatest, map } from 'rxjs';
 import { getFontConfigExtension } from '../font-extension';
 import { createDatabaseOptionsConfig } from './database-block';
 import { createLinkedWidgetConfig } from './widgets/linked';
-import { createToolbarMoreMenuConfig } from './widgets/toolbar';
+import {
+  createToolbarMoreMenuConfig,
+  extendToolbarMoreMenuConfig,
+} from './widgets/toolbar';
 
 function getTelemetryExtension(): ExtensionType {
   return {
@@ -236,6 +241,11 @@ function getEditorConfigExtension(
       linkedWidget: createLinkedWidgetConfig(framework),
       toolbarMoreMenu: createToolbarMoreMenuConfig(framework),
     } satisfies RootBlockConfig),
+
+    ToolbarModuleExtension({
+      id: BlockFlavourIdentifier('custom:affine:*'),
+      config: extendToolbarMoreMenuConfig,
+    }),
   ];
 }
 

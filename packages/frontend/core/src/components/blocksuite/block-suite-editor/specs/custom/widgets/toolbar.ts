@@ -8,12 +8,18 @@ import { EditorService } from '@affine/core/modules/editor';
 import { copyLinkToBlockStdScopeClipboard } from '@affine/core/utils/clipboard';
 import { I18n } from '@affine/i18n';
 import { track } from '@affine/track';
+import { SurfaceSelection } from '@blocksuite/affine/block-std';
 import type {
   GfxBlockElementModel,
   GfxPrimitiveElementModel,
 } from '@blocksuite/affine/block-std/gfx';
-import type { MenuContext, MenuItemGroup } from '@blocksuite/affine/blocks';
-import { LinkIcon } from '@blocksuite/icons/lit';
+import {
+  ActionPlacement,
+  type MenuContext,
+  type MenuItemGroup,
+  type ToolbarModuleConfig,
+} from '@blocksuite/affine/blocks';
+import { CopyAsImgaeIcon, LinkIcon } from '@blocksuite/icons/lit';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 import { createCopyAsPngMenuItem } from './copy-as-image';
@@ -136,3 +142,38 @@ function createCopyLinkToBlockMenuItem(
     },
   };
 }
+
+export const extendToolbarMoreMenuConfig = {
+  actions: [
+    {
+      id: 'clipboard',
+      placement: ActionPlacement.More,
+      actions: [
+        {
+          id: 'copy-as-image',
+          label: 'Copy as Image',
+          icon: CopyAsImgaeIcon(),
+          when: ({ isEdgelessMode, selection }) =>
+            isEdgelessMode && selection.getGroup('note').length === 0,
+          run() {},
+        },
+        {
+          id: 'copy-link-to-block',
+          label: 'Copy link to block',
+          icon: LinkIcon(),
+          when: ({ isPageMode, selection }) => {
+            const hasNoteSelection = selection.getGroup('note').length > 0;
+            if (isPageMode) return hasNoteSelection;
+
+            // Linking blocks in notes is currently not supported in edgeless mode.
+            if (hasNoteSelection) return false;
+
+            // Linking single block/element in edgeless mode.
+            return selection.filter(SurfaceSelection).length === 1;
+          },
+          run() {},
+        },
+      ],
+    },
+  ],
+} as const satisfies ToolbarModuleConfig;
