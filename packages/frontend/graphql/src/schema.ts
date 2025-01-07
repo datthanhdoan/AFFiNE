@@ -1718,6 +1718,15 @@ export type PasswordLimitsFragment = {
   maxLength: number;
 };
 
+export type GenerateLicenseKeyMutationVariables = Exact<{
+  sessionId: Scalars['String']['input'];
+}>;
+
+export type GenerateLicenseKeyMutation = {
+  __typename?: 'Mutation';
+  generateLicenseKey: string;
+};
+
 export type GetCopilotHistoriesQueryVariables = Exact<{
   workspaceId: Scalars['String']['input'];
   docId?: InputMaybe<Scalars['String']['input']>;
@@ -3152,6 +3161,11 @@ export type Mutations =
       name: 'forkCopilotSessionMutation';
       variables: ForkCopilotSessionMutationVariables;
       response: ForkCopilotSessionMutation;
+    }
+  | {
+      name: 'generateLicenseKeyMutation';
+      variables: GenerateLicenseKeyMutationVariables;
+      response: GenerateLicenseKeyMutation;
     }
   | {
       name: 'leaveWorkspaceMutation';
