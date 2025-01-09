@@ -6,7 +6,7 @@ import {
   CopilotProviderSideError,
   metrics,
   UserFriendlyError,
-} from '../../../base';
+} from '../../../../base';
 import {
   ChatMessageRole,
   CopilotCapability,
@@ -19,7 +19,7 @@ import {
   CopilotTextToImageProvider,
   CopilotTextToTextProvider,
   PromptMessage,
-} from '../types';
+} from '../../types';
 
 export const DEFAULT_DIMENSIONS = 256;
 
