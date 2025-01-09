@@ -19,6 +19,8 @@ export { EventSourceService } from './services/eventsource';
 export { FetchService } from './services/fetch';
 export { GraphQLService } from './services/graphql';
 export { InvoicesService } from './services/invoices';
+export { SelfhostActivateLicenseService } from './services/selfhost-activate-license';
+export { SelfhostGenerateLicenseService } from './services/selfhost-generate-license';
 export { ServerService } from './services/server';
 export { ServersService } from './services/servers';
 export { SubscriptionService } from './services/subscription';
@@ -58,6 +60,8 @@ import { EventSourceService } from './services/eventsource';
 import { FetchService } from './services/fetch';
 import { GraphQLService } from './services/graphql';
 import { InvoicesService } from './services/invoices';
+import { SelfhostActivateLicenseService } from './services/selfhost-activate-license';
+import { SelfhostGenerateLicenseService } from './services/selfhost-generate-license';
 import { ServerService } from './services/server';
 import { ServersService } from './services/servers';
 import { SubscriptionService } from './services/subscription';
@@ -70,6 +74,7 @@ import { WorkspaceSubscriptionService } from './services/workspace-subscription'
 import { AuthStore } from './stores/auth';
 import { CloudDocMetaStore } from './stores/cloud-doc-meta';
 import { InvoicesStore } from './stores/invoices';
+import { SelfhostLicenseStore } from './stores/selfhost-license';
 import { ServerConfigStore } from './stores/server-config';
 import { ServerListStore } from './stores/server-list';
 import { SubscriptionStore } from './stores/subscription';
@@ -128,7 +133,10 @@ export function configureCloudModule(framework: Framework) {
     .store(UserFeatureStore, [GraphQLService])
     .service(InvoicesService)
     .store(InvoicesStore, [GraphQLService])
-    .entity(Invoices, [InvoicesStore]);
+    .entity(Invoices, [InvoicesStore])
+    .service(SelfhostGenerateLicenseService, [SelfhostLicenseStore])
+    .service(SelfhostActivateLicenseService, [SelfhostLicenseStore])
+    .store(SelfhostLicenseStore, [GraphQLService]);
 
   framework
     .scope(WorkspaceScope)

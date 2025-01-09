@@ -533,6 +533,12 @@ export interface InvoiceType {
   updatedAt: Scalars['DateTime']['output'];
 }
 
+export interface License {
+  __typename?: 'License';
+  installedAt: Scalars['DateTime']['output'];
+  validatedAt: Scalars['DateTime']['output'];
+}
+
 export interface LimitedUserType {
   __typename?: 'LimitedUserType';
   /** User email */
@@ -574,6 +580,7 @@ export interface MissingOauthQueryParameterDataType {
 export interface Mutation {
   __typename?: 'Mutation';
   acceptInviteById: Scalars['Boolean']['output'];
+  activateLicense: License;
   addWorkspaceFeature: Scalars['Int']['output'];
   approveMember: Scalars['String']['output'];
   cancelSubscription: SubscriptionType;
@@ -598,6 +605,7 @@ export interface Mutation {
   createUser: UserType;
   /** Create a new workspace */
   createWorkspace: WorkspaceType;
+  deactivateLicense: Scalars['Boolean']['output'];
   deleteAccount: DeleteAccount;
   deleteBlob: Scalars['Boolean']['output'];
   /** Delete a user account */
@@ -653,6 +661,11 @@ export interface Mutation {
 export interface MutationAcceptInviteByIdArgs {
   inviteId: Scalars['String']['input'];
   sendAcceptMail?: InputMaybe<Scalars['Boolean']['input']>;
+  workspaceId: Scalars['String']['input'];
+}
+
+export interface MutationActivateLicenseArgs {
+  license: Scalars['String']['input'];
   workspaceId: Scalars['String']['input'];
 }
 
@@ -723,6 +736,10 @@ export interface MutationCreateUserArgs {
 
 export interface MutationCreateWorkspaceArgs {
   init?: InputMaybe<Scalars['Upload']['input']>;
+}
+
+export interface MutationDeactivateLicenseArgs {
+  workspaceId: Scalars['String']['input'];
 }
 
 export interface MutationDeleteBlobArgs {
@@ -1396,6 +1413,8 @@ export interface WorkspaceType {
   /** Get user invoice count */
   invoiceCount: Scalars['Int']['output'];
   invoices: Array<InvoiceType>;
+  /** The selfhost license of the workspace */
+  license: Maybe<License>;
   /** member count of workspace */
   memberCount: Scalars['Int']['output'];
   /** Members of workspace */
@@ -1460,6 +1479,20 @@ export interface TokenType {
   sessionToken: Maybe<Scalars['String']['output']>;
   token: Scalars['String']['output'];
 }
+
+export type ActivateLicenseMutationVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+  license: Scalars['String']['input'];
+}>;
+
+export type ActivateLicenseMutation = {
+  __typename?: 'Mutation';
+  activateLicense: {
+    __typename?: 'License';
+    installedAt: string;
+    validatedAt: string;
+  };
+};
 
 export type AdminServerConfigQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -1667,6 +1700,15 @@ export type CreateWorkspaceMutation = {
     public: boolean;
     createdAt: string;
   };
+};
+
+export type DeactivateLicenseMutationVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+}>;
+
+export type DeactivateLicenseMutation = {
+  __typename?: 'Mutation';
+  deactivateLicense: boolean;
 };
 
 export type DeleteAccountMutationVariables = Exact<{ [key: string]: never }>;
@@ -3068,6 +3110,11 @@ export type Queries =
 
 export type Mutations =
   | {
+      name: 'activateLicenseMutation';
+      variables: ActivateLicenseMutationVariables;
+      response: ActivateLicenseMutation;
+    }
+  | {
       name: 'deleteBlobMutation';
       variables: DeleteBlobMutationVariables;
       response: DeleteBlobMutation;
@@ -3141,6 +3188,11 @@ export type Mutations =
       name: 'createWorkspaceMutation';
       variables: CreateWorkspaceMutationVariables;
       response: CreateWorkspaceMutation;
+    }
+  | {
+      name: 'deactivateLicenseMutation';
+      variables: DeactivateLicenseMutationVariables;
+      response: DeactivateLicenseMutation;
     }
   | {
       name: 'deleteAccountMutation';

@@ -1,13 +1,12 @@
-import { Button, IconButton, notify } from '@affine/component';
+import { Button, IconButton, Loading, notify } from '@affine/component';
 import { AuthPageContainer } from '@affine/component/auth-components';
-import { useMutation } from '@affine/core/components/hooks/use-mutation';
+import { SelfhostGenerateLicenseService } from '@affine/core/modules/cloud';
 import { OpenInAppService } from '@affine/core/modules/open-in-app';
 import { copyTextToClipboard } from '@affine/core/utils/clipboard';
-import { generateLicenseKeyMutation, UserFriendlyError } from '@affine/graphql';
 import { Trans, useI18n } from '@affine/i18n';
 import { CopyIcon } from '@blocksuite/icons/rc';
-import { useService } from '@toeverything/infra';
-import { useCallback, useEffect, useState } from 'react';
+import { useLiveData, useService } from '@toeverything/infra';
+import { useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { PageNotFound } from '../../404';
@@ -20,55 +19,39 @@ import * as styles from './styles.css';
  */
 export const Component = () => {
   const [params] = useSearchParams();
-  const [key, setKey] = useState<string | null>(null);
   const sessionId = params.get('session_id');
-  const { trigger: generateLicenseKey } = useMutation({
-    mutation: generateLicenseKeyMutation,
-  });
+  const selfhostGenerateLicenseService = useService(
+    SelfhostGenerateLicenseService
+  );
+  const isMutating = useLiveData(selfhostGenerateLicenseService.isLoading$);
+  const key = useLiveData(selfhostGenerateLicenseService.licenseKey$);
+  const error = useLiveData(selfhostGenerateLicenseService.error$);
 
   useEffect(() => {
-    if (sessionId && !key) {
-      generateLicenseKey({ sessionId })
-        .then(({ generateLicenseKey }) => {
-          setKey(generateLicenseKey);
-        })
-        .catch(e => {
-          const error = UserFriendlyError.fromAnyError(e);
-          console.error(error);
-
-          notify.error({
-            title: error.name,
-            message: error.message,
-          });
-        });
+    if (isMutating || error) {
+      return;
     }
-  }, [generateLicenseKey, key, sessionId]);
+    if (sessionId && !key) {
+      selfhostGenerateLicenseService.generateLicenseKey(sessionId);
+    }
+  }, [error, isMutating, key, selfhostGenerateLicenseService, sessionId]);
 
   if (!sessionId) {
     return <PageNotFound noPermission />;
   }
-
-  if (key) {
+  if (isMutating || key) {
     return <Success licenseKey={key} />;
   } else {
     return (
       <AuthPageContainer
-        title={'Failed to generate the license key'}
-        subtitle={
-          <span>
-            Failed to generate the license key, please contact our {''}
-            <a href="mailto:support@toeverything.info" className={styles.mail}>
-              customer support
-            </a>
-            .
-          </span>
-        }
+        title={'failed to generate license key'}
+        subtitle={error?.message}
       ></AuthPageContainer>
     );
   }
 };
 
-const Success = ({ licenseKey }: { licenseKey: string }) => {
+const Success = ({ licenseKey }: { licenseKey: string | null }) => {
   const t = useI18n();
   const openInAppService = useService(OpenInAppService);
 
@@ -77,6 +60,10 @@ const Success = ({ licenseKey }: { licenseKey: string }) => {
   }, [openInAppService]);
 
   const onCopy = useCallback(() => {
+    if (!licenseKey) {
+      notify.error({ title: 'Copy failed, please try again later' });
+      return;
+    }
     copyTextToClipboard(licenseKey)
       .then(success => {
         if (success) {
@@ -116,7 +103,7 @@ const Success = ({ licenseKey }: { licenseKey: string }) => {
     >
       <div className={styles.content}>
         <div className={styles.licenseKeyContainer}>
-          {licenseKey}
+          {licenseKey ? licenseKey : <Loading />}
           <IconButton
             icon={<CopyIcon />}
             className={styles.icon}

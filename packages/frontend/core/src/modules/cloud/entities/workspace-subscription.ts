@@ -27,7 +27,9 @@ export class WorkspaceSubscription extends Entity {
   error$ = new LiveData<any | null>(null);
 
   team$ = this.subscription$.map(
-    subscription => subscription?.plan === SubscriptionPlan.Team
+    subscription =>
+      subscription?.plan === SubscriptionPlan.Team ||
+      subscription?.plan === SubscriptionPlan.SelfHostedTeam
   );
 
   constructor(
