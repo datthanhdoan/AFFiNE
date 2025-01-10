@@ -847,7 +847,7 @@ __metadata:
     nodemailer: "npm:^6.9.16"
     nodemon: "npm:^3.1.7"
     on-headers: "npm:^1.0.2"
-    openai: "npm:^4.76.2"
+    openai: "npm:^4.78.0"
     piscina: "npm:^5.0.0-alpha.0"
     prisma: "npm:^5.22.0"
     react: "npm:19.0.0"
@@ -28588,9 +28588,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"openai@npm:^4.76.2":
-  version: 4.79.1
-  resolution: "openai@npm:4.79.1"
+"openai@npm:^4.78.0":
+  version: 4.78.0
+  resolution: "openai@npm:4.78.0"
   dependencies:
     "@types/node": "npm:^18.11.18"
     "@types/node-fetch": "npm:^2.6.4"
@@ -28600,16 +28600,13 @@ __metadata:
     formdata-node: "npm:^4.3.2"
     node-fetch: "npm:^2.6.7"
   peerDependencies:
-    ws: ^8.18.0
     zod: ^3.23.8
   peerDependenciesMeta:
-    ws:
-      optional: true
     zod:
       optional: true
   bin:
     openai: bin/cli
-  checksum: 10/455b32778d63328a2fb4f24de749e110399f5977ec5027b28bdf7a129b4fc706600a8d1be09a2d260f8f797743b31364a49c4b222306a67f87c222b527039448
+  checksum: 10/3ef1f5c21117b0f6a526d9559655ff31e1e9536b868f396488ab15899e90561e47f70939f1506cf6b0da8d986db821111e2db3f0020768ab9d43d10e2ab56833
   languageName: node
   linkType: hard
 

@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { VectorStore } from 'openai/resources/beta/vector-stores/vector-stores.mjs';
-import type { Uploadable } from 'openai/uploads.mjs';
+
+import { CopilotContext, FileLike } from '../../types';
 
 export class ContextService {
   private readonly storeIdMap = new Map<string, string>();
@@ -10,6 +11,7 @@ export class ContextService {
 
   private saveContext(store: VectorStore) {
     const context = new Context(this.client, store);
+    // TODO(darkskygit): save to redis to share between pods
     this.storeIdMap.set(context.name, context.id);
     this.storeMap.set(context.name, context);
     return context;
@@ -36,7 +38,7 @@ export class ContextService {
   }
 }
 
-export class Context {
+export class Context implements CopilotContext {
   constructor(
     private readonly client: OpenAI,
     public readonly store: VectorStore
@@ -51,24 +53,38 @@ export class Context {
   }
 
   private get files() {
+    return this.client.files;
+  }
+
+  private get vectorFiles() {
     return this.client.beta.vectorStores.files;
   }
 
   async list() {
-    const lists = await this.files.list(this.id);
-    const list = await Array.fromAsync(lists.iterPages());
-    return list.flatMap(f => f.data);
+    const lists = await this.vectorFiles.list(this.id);
+    const list = [];
+    for await (const page of lists.iterPages()) {
+      list.push(...page.data);
+    }
+    return list;
   }
 
-  async add(content: Uploadable, signal?: AbortSignal) {
-    const file = await this.files.uploadAndPoll(this.id, content, {
+  async add(content: FileLike, signal?: AbortSignal) {
+    const file = await this.vectorFiles.uploadAndPoll(this.id, content, {
       signal,
     });
+    if (file.status !== 'completed') {
+      // revert the file upload if processing failed
+      await this.remove(file.id);
+      throw new Error('Failed to upload file');
+    }
     return file.id;
   }
 
   async remove(fileId: string) {
-    const ret = await this.files.del(this.id, fileId);
-    return ret.deleted;
+    const vector = await this.vectorFiles.del(this.id, fileId);
+    const polled = await this.vectorFiles.poll(this.id, fileId);
+    const file = await this.files.del(fileId);
+    return vector.deleted && polled.status === 'completed' && file.deleted;
   }
 }

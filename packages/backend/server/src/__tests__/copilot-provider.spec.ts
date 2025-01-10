@@ -17,6 +17,7 @@ import {
   registerCopilotProvider,
   unregisterCopilotProvider,
 } from '../plugins/copilot/providers';
+import { CopilotCapability, CopilotContext } from '../plugins/copilot/types';
 import {
   CopilotChatTextExecutor,
   CopilotWorkflowService,
@@ -511,3 +512,29 @@ for (const { name, content, verifier } of workflows) {
     }
   );
 }
+
+// ==================== context ====================
+test('should manage openai context', runIfCopilotConfigured, async t => {
+  const { provider } = t.context;
+
+  {
+    const p = await provider.getProviderByCapability(
+      CopilotCapability.TextToTextWithContext
+    );
+    const context = (await p?.getContext('test')) as CopilotContext;
+    t.truthy(context, 'should get context');
+    const fileId = await context.add(
+      new File([Uint8Array.from('asdasd')], 'test.txt', {
+        type: 'text/plain',
+      })
+    );
+    const list = await context.list();
+    t.deepEqual(
+      list.map(f => f.id),
+      [fileId],
+      'should list context'
+    );
+    t.true(await context.remove(fileId), 'should remove context');
+    t.is((await context.list()).length, 0, 'should remove context');
+  }
+});

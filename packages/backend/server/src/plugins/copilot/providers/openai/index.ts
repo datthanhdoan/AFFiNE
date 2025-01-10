@@ -18,8 +18,10 @@ import {
   CopilotTextToEmbeddingProvider,
   CopilotTextToImageProvider,
   CopilotTextToTextProvider,
+  CopilotTextToTextWithContextProvider,
   PromptMessage,
 } from '../../types';
+import { Context, ContextService } from './context';
 
 export const DEFAULT_DIMENSIONS = 256;
 
@@ -28,6 +30,7 @@ const SIMPLE_IMAGE_URL_REGEX = /^(https?:\/\/|data:image\/)/;
 export class OpenAIProvider
   implements
     CopilotTextToTextProvider,
+    CopilotTextToTextWithContextProvider,
     CopilotTextToEmbeddingProvider,
     CopilotTextToImageProvider,
     CopilotImageToTextProvider
@@ -35,6 +38,7 @@ export class OpenAIProvider
   static readonly type = CopilotProviderType.OpenAI;
   static readonly capabilities = [
     CopilotCapability.TextToText,
+    CopilotCapability.TextToTextWithContext,
     CopilotCapability.TextToEmbedding,
     CopilotCapability.TextToImage,
     CopilotCapability.ImageToText,
@@ -59,10 +63,12 @@ export class OpenAIProvider
 
   private readonly logger = new Logger(OpenAIProvider.type);
   private readonly instance: OpenAI;
+  private readonly context: ContextService;
   private existsModels: string[] | undefined;
 
   constructor(config: ClientOptions) {
     this.instance = new OpenAI(config);
+    this.context = new ContextService(this.instance);
   }
 
   static assetsConfig(config: ClientOptions) {
@@ -75,6 +81,10 @@ export class OpenAIProvider
 
   getCapabilities(): CopilotCapability[] {
     return OpenAIProvider.capabilities;
+  }
+
+  getContext(name: string, id?: string): Promise<Context> {
+    return this.context.getOrCreate(name, id);
   }
 
   async isModelAvailable(model: string): Promise<boolean> {
