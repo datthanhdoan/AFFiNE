@@ -1,0 +1,49 @@
+[versions]
+androidxActivityVersion = "1.9.3"
+androidxCoreVersion = "1.15.0"
+androidxEspressoCoreVersion = "3.6.1"
+androidxFragmentVersion = "1.8.5"
+androidxJunitVersion = "1.2.1"
+androidxWebkitVersion = "1.12.1"
+cordovaAndroidVersion = "10.1.1"
+coreKtx = "1.15.0"
+coreSplashScreenVersion = "1.0.1"
+jna = "5.16.0"
+jsonVersion = "20241224"
+junitVersion = "4.13.2"
+kotlin = "2.1.0"
+kotlinxCoroutinesCore = "1.10.1"
+mockitoInlineVersion = "5.2.0"
+rustAndroid = "0.9.6"
+appcompat = "1.7.0"
+coordinatorLayout = "1.2.0"
+
+googleServices = "4.4.2"
+androidGradlePlugin = "8.8.0"
+
+[libraries]
+androidx-activity = { module = "androidx.activity:activity", version.ref = "androidxActivityVersion" }
+androidx-core = { module = "androidx.core:core", version.ref = "androidxCoreVersion" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+androidx-coordinatorlayout = { module = "androidx.coordinatorlayout:coordinatorlayout", version.ref = "coordinatorLayout" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashScreenVersion" }
+androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidxEspressoCoreVersion" }
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "androidxFragmentVersion" }
+androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunitVersion" }
+androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "androidxWebkitVersion" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+
+cordova-framework = { module = "org.apache.cordova:framework", version.ref = "cordovaAndroidVersion" }
+google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
+android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "androidGradlePlugin" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+json = { module = "org.json:json", version.ref = "jsonVersion" }
+junit = { module = "junit:junit", version.ref = "junitVersion" }
+mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockitoInlineVersion" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version.ref = "rustAndroid" }
