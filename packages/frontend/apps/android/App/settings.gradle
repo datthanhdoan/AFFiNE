@@ -13,5 +13,6 @@ pluginManagement {
 }
 
 include ':app'
+include ':service'
 include ':capacitor-cordova-android-plugins'
 apply from: 'capacitor.settings.gradle'

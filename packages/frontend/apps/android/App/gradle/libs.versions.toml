@@ -17,9 +17,9 @@ mockitoInlineVersion = "5.2.0"
 rustAndroid = "0.9.6"
 appcompat = "1.7.0"
 coordinatorLayout = "1.2.0"
-
 googleServices = "4.4.2"
 androidGradlePlugin = "8.8.0"
+apollo = "4.1.0"
 
 [libraries]
 androidx-activity = { module = "androidx.activity:activity", version.ref = "androidxActivityVersion" }
@@ -41,9 +41,13 @@ jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 json = { module = "org.json:json", version.ref = "jsonVersion" }
 junit = { module = "junit:junit", version.ref = "junitVersion" }
 mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockitoInlineVersion" }
+apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
+apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "apollo" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version.ref = "rustAndroid" }
+apollo-android = { id = "com.apollographql.apollo", version.ref = "apollo" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
