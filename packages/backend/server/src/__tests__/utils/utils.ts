@@ -15,7 +15,7 @@ import { AuthGuard, AuthModule } from '../../core/auth';
 import { UserFeaturesInit1698652531198 } from '../../data/migrations/1698652531198-user-features-init';
 import { ModelsModule } from '../../models';
 
-export type PermissionEnum = 'Owner' | 'Admin' | 'Write' | 'Read';
+export type PermissionEnum = 'Owner' | 'Admin' | 'Collaborator' | 'External';
 
 async function flushDB(client: PrismaClient) {
   const result: { tablename: string }[] =

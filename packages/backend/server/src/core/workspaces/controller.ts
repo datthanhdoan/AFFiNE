@@ -13,7 +13,11 @@ import {
 } from '../../base';
 import { CurrentUser, Public } from '../auth';
 import { PgWorkspaceDocStorageAdapter } from '../doc';
-import { Permission, PermissionService, PublicPageMode } from '../permission';
+import {
+  PermissionService,
+  PublicPageMode,
+  WorkspaceRole,
+} from '../permission';
 import { WorkspaceBlobStorage } from '../storage';
 import { DocID } from '../utils/doc';
 
@@ -148,7 +152,7 @@ export class WorkspacesController {
       docId.workspace,
       docId.guid,
       user.id,
-      Permission.Write
+      WorkspaceRole.Collaborator
     );
 
     const history = await this.workspace.getDocHistory(

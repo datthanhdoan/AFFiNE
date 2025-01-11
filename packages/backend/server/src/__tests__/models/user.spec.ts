@@ -5,7 +5,7 @@ import ava, { TestFn } from 'ava';
 import Sinon from 'sinon';
 
 import { EmailAlreadyUsed } from '../../base';
-import { Permission } from '../../models/common';
+import { WorkspaceRole } from '../../core/permission/types';
 import { UserModel } from '../../models/user';
 import { WorkspaceMemberStatus } from '../../models/workspace';
 import { createTestingModule, initTestingDB } from '../utils';
@@ -264,7 +264,7 @@ test('should trigger user.deleted event', async t => {
             public: false,
           },
         },
-        type: Permission.Owner,
+        type: WorkspaceRole.Owner,
         status: WorkspaceMemberStatus.Accepted,
       },
     },

@@ -5,7 +5,7 @@ import ava, { TestFn } from 'ava';
 import Sinon from 'sinon';
 
 import { Config } from '../../base/config';
-import { Permission } from '../../models/common';
+import { WorkspaceRole } from '../../core/permission';
 import { UserModel } from '../../models/user';
 import { WorkspaceModel } from '../../models/workspace';
 import { createTestingModule, initTestingDB } from '../utils';
@@ -93,25 +93,25 @@ test('should workspace owner has all permissions', async t => {
   let allowed = await t.context.workspace.isMember(
     workspace.id,
     user.id,
-    Permission.Owner
+    WorkspaceRole.Owner
   );
   t.is(allowed, true);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     user.id,
-    Permission.Admin
+    WorkspaceRole.Admin
   );
   t.is(allowed, true);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     user.id,
-    Permission.Write
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     user.id,
-    Permission.Read
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
 });
@@ -128,32 +128,32 @@ test('should workspace admin has all permissions except owner', async t => {
     data: {
       workspaceId: workspace.id,
       userId: otherUser.id,
-      type: Permission.Admin,
+      type: WorkspaceRole.Admin,
       status: WorkspaceMemberStatus.Accepted,
     },
   });
   let allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Owner
+    WorkspaceRole.Owner
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Admin
+    WorkspaceRole.Admin
   );
   t.is(allowed, true);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Write
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Read
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
 });
@@ -170,32 +170,32 @@ test('should workspace write has write and read permissions', async t => {
     data: {
       workspaceId: workspace.id,
       userId: otherUser.id,
-      type: Permission.Write,
+      type: WorkspaceRole.Collaborator,
       status: WorkspaceMemberStatus.Accepted,
     },
   });
   let allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Owner
+    WorkspaceRole.Owner
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Admin
+    WorkspaceRole.Admin
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Write
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Read
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
 });
@@ -212,32 +212,26 @@ test('should workspace read has read permission only', async t => {
     data: {
       workspaceId: workspace.id,
       userId: otherUser.id,
-      type: Permission.Read,
+      type: WorkspaceRole.Collaborator,
       status: WorkspaceMemberStatus.Accepted,
     },
   });
   let allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Owner
+    WorkspaceRole.Owner
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Admin
+    WorkspaceRole.Admin
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Write
-  );
-  t.is(allowed, false);
-  allowed = await t.context.workspace.isMember(
-    workspace.id,
-    otherUser.id,
-    Permission.Read
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, true);
 });
@@ -253,25 +247,25 @@ test('should user not in workspace has no permissions', async t => {
   let allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Owner
+    WorkspaceRole.Owner
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Admin
+    WorkspaceRole.Admin
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Write
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, false);
   allowed = await t.context.workspace.isMember(
     workspace.id,
     otherUser.id,
-    Permission.Read
+    WorkspaceRole.Collaborator
   );
   t.is(allowed, false);
 });
@@ -314,7 +308,7 @@ test('should grant member with read permission and Pending status by default', a
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.Pending);
 
   // grant again should do nothing
@@ -345,18 +339,18 @@ test('should grant Pending status member to Accepted status', async t => {
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.Pending);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Read);
+  t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -371,27 +365,27 @@ test('should grant new owner and change exists owner to admin', async t => {
   const member1 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.Accepted);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Owner,
+    WorkspaceRole.Owner,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Owner);
+  t.is(member2.type, WorkspaceRole.Owner);
   t.is(member2.status, WorkspaceMemberStatus.Accepted);
   // check old owner
   const owner = await t.context.workspace.getMember(workspace.id, user.id);
-  t.is(owner!.type, Permission.Admin);
+  t.is(owner!.type, WorkspaceRole.Admin);
   t.is(owner!.status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -406,23 +400,23 @@ test('should grant write permission on exists member', async t => {
   const member1 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.Accepted);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Write,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Write);
+  t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -437,23 +431,23 @@ test('should grant UnderReview status member to Accepted status', async t => {
   const member1 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.UnderReview
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.UnderReview);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Read);
+  t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -468,23 +462,23 @@ test('should grant NeedMoreSeat status member to Pending status', async t => {
   const member1 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.NeedMoreSeat
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.NeedMoreSeat);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Pending
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Read);
+  t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.Pending);
 });
 
@@ -499,23 +493,23 @@ test('should grant NeedMoreSeatAndReview status member to UnderReview status', a
   const member1 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.NeedMoreSeatAndReview
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.NeedMoreSeatAndReview);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.UnderReview
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Read);
+  t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.UnderReview);
 });
 
@@ -533,19 +527,19 @@ test('should grant Pending status member to write permission and Accepted status
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.Pending);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Write,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
   // TODO(fengmk2): fix this
-  // t.is(member2.type, Permission.Write);
+  // t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -560,23 +554,23 @@ test('should grant no thing on invalid status', async t => {
   const member1 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.NeedMoreSeat
   );
   t.is(member1.workspaceId, workspace.id);
   t.is(member1.userId, otherUser.id);
-  t.is(member1.type, Permission.Read);
+  t.is(member1.type, WorkspaceRole.Collaborator);
   t.is(member1.status, WorkspaceMemberStatus.NeedMoreSeat);
 
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.workspaceId, workspace.id);
   t.is(member2.userId, otherUser.id);
-  t.is(member2.type, Permission.Read);
+  t.is(member2.type, WorkspaceRole.Collaborator);
   t.is(member2.status, WorkspaceMemberStatus.NeedMoreSeat);
 });
 
@@ -591,7 +585,7 @@ test('should get the accepted status workspace member', async t => {
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   const member = await t.context.workspace.getMember(
@@ -600,7 +594,7 @@ test('should get the accepted status workspace member', async t => {
   );
   t.is(member!.workspaceId, workspace.id);
   t.is(member!.userId, otherUser.id);
-  t.is(member!.type, Permission.Read);
+  t.is(member!.type, WorkspaceRole.Collaborator);
   t.is(member!.status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -615,7 +609,7 @@ test('should get any status workspace member, including pending and accepted', a
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Pending
   );
   const member = await t.context.workspace.getMemberInAnyStatus(
@@ -624,7 +618,7 @@ test('should get any status workspace member, including pending and accepted', a
   );
   t.is(member!.workspaceId, workspace.id);
   t.is(member!.userId, otherUser.id);
-  t.is(member!.type, Permission.Read);
+  t.is(member!.type, WorkspaceRole.Collaborator);
   t.is(member!.status, WorkspaceMemberStatus.Pending);
 });
 
@@ -636,7 +630,7 @@ test('should get workspace owner by workspace id', async t => {
   const owner = await t.context.workspace.getOwner(workspace.id);
   t.is(owner!.workspaceId, workspace.id);
   t.is(owner!.userId, user.id);
-  t.is(owner!.type, Permission.Owner);
+  t.is(owner!.type, WorkspaceRole.Owner);
   t.is(owner!.status, WorkspaceMemberStatus.Accepted);
   t.truthy(owner!.user);
   t.deepEqual(owner!.user, user);
@@ -659,27 +653,27 @@ test('should find workspace admin by workspace id', async t => {
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser1.id,
-    Permission.Admin,
+    WorkspaceRole.Admin,
     WorkspaceMemberStatus.Accepted
   );
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser2.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   // pending member should not be admin
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser3.id,
-    Permission.Admin,
+    WorkspaceRole.Admin,
     WorkspaceMemberStatus.Pending
   );
   const members = await t.context.workspace.findAdmins(workspace.id);
   t.is(members.length, 1);
   t.is(members[0].workspaceId, workspace.id);
   t.is(members[0].userId, otherUser1.id);
-  t.is(members[0].type, Permission.Admin);
+  t.is(members[0].type, WorkspaceRole.Admin);
   t.is(members[0].status, WorkspaceMemberStatus.Accepted);
 });
 
@@ -711,13 +705,13 @@ test('should the workspace member total count, including pending and accepted', 
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser1.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Pending
   );
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser2.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   const count = await t.context.workspace.getMemberTotalCount(workspace.id);
@@ -738,13 +732,13 @@ test('should the workspace member used count, only count the accepted member', a
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser1.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Pending
   );
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser2.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   const count = await t.context.workspace.getMemberUsedCount(workspace.id);
@@ -856,7 +850,7 @@ test('should delete workspace member in Pending, Accepted status', async t => {
   const member2 = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Accepted
   );
   t.is(member2.status, WorkspaceMemberStatus.Accepted);
@@ -875,7 +869,7 @@ test('should trigger workspace.members.requestDeclined event when delete workspa
   const member = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.UnderReview
   );
   t.is(member.status, WorkspaceMemberStatus.UnderReview);
@@ -920,7 +914,7 @@ test('should trigger workspace.members.requestDeclined event when delete workspa
   const member = await t.context.workspace.grantMember(
     workspace.id,
     otherUser.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.NeedMoreSeatAndReview
   );
   t.is(member.status, WorkspaceMemberStatus.NeedMoreSeatAndReview);
@@ -971,19 +965,19 @@ test('should refresh member seat status', async t => {
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser1.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.NeedMoreSeatAndReview
   );
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser2.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.Pending
   );
   await t.context.workspace.grantMember(
     workspace.id,
     otherUser3.id,
-    Permission.Read,
+    WorkspaceRole.Collaborator,
     WorkspaceMemberStatus.NeedMoreSeat
   );
   let count = await t.context.db.workspaceUserPermission.count({
@@ -1044,30 +1038,30 @@ test('should find the workspace members order by type:desc and createdAt:asc', a
     await t.context.workspace.grantMember(
       workspace.id,
       otherUser.id,
-      Permission.Read,
+      WorkspaceRole.Collaborator,
       WorkspaceMemberStatus.Accepted
     );
   }
   let members = await t.context.workspace.findMembers(workspace.id);
   t.is(members.length, 8);
-  t.is(members[0].type, Permission.Owner);
+  t.is(members[0].type, WorkspaceRole.Owner);
   t.is(members[0].status, WorkspaceMemberStatus.Accepted);
   for (let i = 1; i < 8; i++) {
-    t.is(members[i].type, Permission.Read);
+    t.is(members[i].type, WorkspaceRole.Collaborator);
     t.is(members[i].status, WorkspaceMemberStatus.Accepted);
   }
   members = await t.context.workspace.findMembers(workspace.id, { take: 100 });
   t.is(members.length, 11);
-  t.is(members[0].type, Permission.Owner);
+  t.is(members[0].type, WorkspaceRole.Owner);
   t.is(members[0].status, WorkspaceMemberStatus.Accepted);
   for (let i = 1; i < 11; i++) {
-    t.is(members[i].type, Permission.Read);
+    t.is(members[i].type, WorkspaceRole.Collaborator);
     t.is(members[i].status, WorkspaceMemberStatus.Accepted);
   }
   // skip should work
   members = await t.context.workspace.findMembers(workspace.id, { skip: 5 });
   t.is(members.length, 6);
-  t.is(members[0].type, Permission.Read);
+  t.is(members[0].type, WorkspaceRole.Collaborator);
 });
 
 test('should get the workspace member invitation', async t => {

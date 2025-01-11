@@ -13,7 +13,7 @@ import { AppModule } from '../app.module';
 import { EventEmitter } from '../base';
 import { AuthService } from '../core/auth';
 import { DocContentService } from '../core/doc-renderer';
-import { Permission, PermissionService } from '../core/permission';
+import { PermissionService, WorkspaceRole } from '../core/permission';
 import { QuotaManagementService, QuotaService, QuotaType } from '../core/quota';
 import { WorkspaceType } from '../core/workspaces';
 import {
@@ -105,7 +105,7 @@ const init = async (
 
   const invite = async (
     email: string,
-    permission: PermissionEnum = 'Write',
+    permission: PermissionEnum = 'Collaborator',
     shouldSendEmail: boolean = false
   ) => {
     const member = await signUp(app, email.split('@')[0], email, '123456');
@@ -195,7 +195,7 @@ const init = async (
 
   const admin = await invite(`${prefix}admin@affine.pro`, 'Admin');
   const write = await invite(`${prefix}write@affine.pro`);
-  const read = await invite(`${prefix}read@affine.pro`, 'Read');
+  const read = await invite(`${prefix}read@affine.pro`, 'Collaborator');
 
   return {
     invite,
@@ -268,7 +268,7 @@ test('should be able to check seat limit', async t => {
   {
     // invite
     await t.throwsAsync(
-      invite('member3@affine.pro', 'Read'),
+      invite('member3@affine.pro', 'Collaborator'),
       { message: 'You have exceeded your workspace member quota.' },
       'should throw error if exceed member limit'
     );
@@ -276,7 +276,7 @@ test('should be able to check seat limit', async t => {
       memberLimit: 5,
     });
     await t.notThrowsAsync(
-      invite('member4@affine.pro', 'Read'),
+      invite('member4@affine.pro', 'Collaborator'),
       'should not throw error if not exceed member limit'
     );
   }
@@ -324,17 +324,17 @@ test('should be able to grant team member permission', async t => {
   const { owner, teamWorkspace: ws, admin, write, read } = await init(app);
 
   await t.throwsAsync(
-    grantMember(app, read.token.token, ws.id, write.id, 'Write'),
+    grantMember(app, read.token.token, ws.id, write.id, 'Collaborator'),
     { instanceOf: Error },
     'should throw error if not owner'
   );
   await t.throwsAsync(
-    grantMember(app, write.token.token, ws.id, read.id, 'Write'),
+    grantMember(app, write.token.token, ws.id, read.id, 'Collaborator'),
     { instanceOf: Error },
     'should throw error if not owner'
   );
   await t.throwsAsync(
-    grantMember(app, admin.token.token, ws.id, read.id, 'Write'),
+    grantMember(app, admin.token.token, ws.id, read.id, 'Collaborator'),
     { instanceOf: Error },
     'should throw error if not owner'
   );
@@ -342,7 +342,11 @@ test('should be able to grant team member permission', async t => {
   {
     // owner should be able to grant permission
     t.true(
-      await permissions.tryCheckWorkspaceIs(ws.id, read.id, Permission.Read),
+      await permissions.tryCheckWorkspaceIs(
+        ws.id,
+        read.id,
+        WorkspaceRole.Collaborator
+      ),
       'should be able to check permission'
     );
     t.truthy(
@@ -350,7 +354,11 @@ test('should be able to grant team member permission', async t => {
       'should be able to grant permission'
     );
     t.true(
-      await permissions.tryCheckWorkspaceIs(ws.id, read.id, Permission.Admin),
+      await permissions.tryCheckWorkspaceIs(
+        ws.id,
+        read.id,
+        WorkspaceRole.Admin
+      ),
       'should be able to check permission'
     );
   }
@@ -697,7 +705,11 @@ test('should be able to emit events', async t => {
       event.emit.lastCall.args,
       [
         'workspace.members.roleChanged',
-        { userId: read.id, workspaceId: tws.id, permission: Permission.Admin },
+        {
+          userId: read.id,
+          workspaceId: tws.id,
+          permission: WorkspaceRole.Admin,
+        },
       ],
       'should emit role changed event'
     );

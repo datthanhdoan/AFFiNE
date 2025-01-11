@@ -13,7 +13,7 @@ import type { SnapshotHistory } from '@prisma/client';
 
 import { CurrentUser } from '../../auth';
 import { PgWorkspaceDocStorageAdapter } from '../../doc';
-import { Permission, PermissionService } from '../../permission';
+import { PermissionService, WorkspaceRole } from '../../permission';
 import { DocID } from '../../utils/doc';
 import { WorkspaceType } from '../types';
 import { EditorType } from './workspace';
@@ -80,7 +80,7 @@ export class DocHistoryResolver {
       docId.workspace,
       docId.guid,
       user.id,
-      Permission.Write
+      WorkspaceRole.Collaborator
     );
 
     await this.workspace.rollbackDoc(

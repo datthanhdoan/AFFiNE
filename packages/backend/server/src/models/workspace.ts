@@ -8,8 +8,8 @@ import {
 import { groupBy } from 'lodash-es';
 
 import { EventEmitter } from '../base';
+import { WorkspaceRole } from '../core/permission';
 import { BaseModel } from './base';
-import { Permission } from './common';
 
 export { WorkspaceMemberStatus };
 export type { Workspace };
@@ -43,7 +43,7 @@ export class WorkspaceModel extends BaseModel {
         public: false,
         permissions: {
           create: {
-            type: Permission.Owner,
+            type: WorkspaceRole.Owner,
             userId: userId,
             accepted: true,
             status: WorkspaceMemberStatus.Accepted,
@@ -94,7 +94,7 @@ export class WorkspaceModel extends BaseModel {
     const rows = await this.db.workspaceUserPermission.findMany({
       where: {
         userId,
-        type: Permission.Owner,
+        type: WorkspaceRole.Owner,
         OR: this.acceptedCondition,
       },
       select: {
@@ -130,7 +130,7 @@ export class WorkspaceModel extends BaseModel {
   async grantMember(
     workspaceId: string,
     userId: string,
-    permission: Permission = Permission.Read,
+    permission: WorkspaceRole = WorkspaceRole.Collaborator,
     status: WorkspaceMemberStatus = WorkspaceMemberStatus.Pending
   ): Promise<WorkspaceUserPermission> {
     const data = await this.tx.workspaceUserPermission.findUnique({
@@ -144,17 +144,19 @@ export class WorkspaceModel extends BaseModel {
 
     if (!data) {
       // Create a new permission
-      // TODO(fengmk2): should we check the permission here? Like owner can't be pending?
       const created = await this.tx.workspaceUserPermission.create({
         data: {
           workspaceId,
           userId,
           type: permission,
-          status,
+          status:
+            permission === WorkspaceRole.Owner
+              ? WorkspaceMemberStatus.Accepted
+              : status,
         },
       });
       this.logger.log(
-        `Granted workspace ${workspaceId} member ${userId} with permission ${permission}`
+        `Granted workspace ${workspaceId} member ${userId} with permission ${WorkspaceRole[permission]}`
       );
       await this.notifyMembersUpdated(workspaceId);
       return created;
@@ -169,14 +171,14 @@ export class WorkspaceModel extends BaseModel {
         data: { type: permission },
       });
       // If the new permission is owner, we need to revoke old owner
-      if (permission === Permission.Owner) {
+      if (permission === WorkspaceRole.Owner) {
         await this.tx.workspaceUserPermission.updateMany({
           where: {
             workspaceId,
-            type: Permission.Owner,
+            type: WorkspaceRole.Owner,
             userId: { not: userId },
           },
-          data: { type: Permission.Admin },
+          data: { type: WorkspaceRole.Admin },
         });
         this.logger.log(
           `Change owner of workspace ${workspaceId} to ${userId}`
@@ -271,7 +273,7 @@ export class WorkspaceModel extends BaseModel {
   async isMember(
     workspaceId: string,
     userId: string,
-    permission: Permission = Permission.Read
+    permission: WorkspaceRole = WorkspaceRole.Collaborator
   ) {
     const count = await this.db.workspaceUserPermission.count({
       where: {
@@ -293,7 +295,7 @@ export class WorkspaceModel extends BaseModel {
     return await this.db.workspaceUserPermission.findFirst({
       where: {
         workspaceId,
-        type: Permission.Owner,
+        type: WorkspaceRole.Owner,
         OR: this.acceptedCondition,
       },
       include: {
@@ -309,7 +311,7 @@ export class WorkspaceModel extends BaseModel {
     return await this.db.workspaceUserPermission.findMany({
       where: {
         workspaceId,
-        type: Permission.Admin,
+        type: WorkspaceRole.Admin,
         OR: this.acceptedCondition,
       },
       include: {
@@ -347,7 +349,7 @@ export class WorkspaceModel extends BaseModel {
 
     // We shouldn't revoke owner permission
     // should auto deleted by workspace/user delete cascading
-    if (!member || member.type === Permission.Owner) {
+    if (!member || member.type === WorkspaceRole.Owner) {
       return false;
     }
 
