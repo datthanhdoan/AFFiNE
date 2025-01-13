@@ -81,6 +81,18 @@ export class Context implements CopilotContext {
     return file.id;
   }
 
+  async addByFileId(fileId: string, signal?: AbortSignal): Promise<string> {
+    const file = await this.vectorFiles.createAndPoll(
+      this.id,
+      { file_id: fileId },
+      { signal }
+    );
+    if (file.status !== 'completed') {
+      throw new Error('Failed to upload file');
+    }
+    return file.id;
+  }
+
   async remove(fileId: string) {
     const vector = await this.vectorFiles.del(this.id, fileId);
     const polled = await this.vectorFiles.poll(this.id, fileId);

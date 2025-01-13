@@ -241,6 +241,7 @@ export interface FileLike extends BlobLike {
 export interface CopilotContext {
   list(): Promise<CopilotContextFile[]>;
   add(content: FileLike, signal?: AbortSignal): Promise<string>;
+  addByFileId(context: string, signal?: AbortSignal): Promise<string>;
   remove(fileId: string): Promise<boolean>;
 }
 
