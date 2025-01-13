@@ -206,17 +206,6 @@ mutation createCopilotSession($options: CreateChatSessionInput!) {
 }`,
 };
 
-export const updateCopilotSessionMutation = {
-  id: 'updateCopilotSessionMutation' as const,
-  operationName: 'updateCopilotSession',
-  definitionName: 'updateCopilotSession',
-  containsFile: false,
-  query: `
-mutation updateCopilotSession($options: UpdateChatSessionInput!) {
-  updateCopilotSession(options: $options)
-}`,
-};
-
 export const createCustomerPortalMutation = {
   id: 'createCustomerPortalMutation' as const,
   operationName: 'createCustomerPortal',
@@ -1143,6 +1132,17 @@ mutation updateAccount($id: String!, $input: ManageUserInput!) {
 }`,
 };
 
+export const updateCopilotSessionMutation = {
+  id: 'updateCopilotSessionMutation' as const,
+  operationName: 'updateCopilotSession',
+  definitionName: 'updateCopilotSession',
+  containsFile: false,
+  query: `
+mutation updateCopilotSession($options: UpdateChatSessionInput!) {
+  updateCopilotSession(options: $options)
+}`,
+};
+
 export const updatePromptMutation = {
   id: 'updatePromptMutation' as const,
   operationName: 'updatePrompt',
@@ -1338,26 +1338,6 @@ export const addWorkspaceFeatureMutation = {
   query: `
 mutation addWorkspaceFeature($workspaceId: String!, $feature: FeatureType!) {
   addWorkspaceFeature(workspaceId: $workspaceId, feature: $feature)
-}`,
-};
-
-export const listWorkspaceFeaturesQuery = {
-  id: 'listWorkspaceFeaturesQuery' as const,
-  operationName: 'listWorkspaceFeatures',
-  definitionName: 'listWorkspaceFeatures',
-  containsFile: false,
-  query: `
-query listWorkspaceFeatures($feature: FeatureType!) {
-  listWorkspaceFeatures(feature: $feature) {
-    id
-    public
-    createdAt
-    memberCount
-    owner {
-      id
-    }
-    features
-  }
 }`,
 };
 
