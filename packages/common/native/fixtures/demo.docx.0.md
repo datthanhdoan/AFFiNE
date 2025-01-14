@@ -14,7 +14,7 @@ To see the DOCX conversion in action, simply add this file to calibre using the 
 
 Here, we demonstrate various types of inline text formatting and the use of embedded fonts.
 
-Here is some **bold, \***italic, \***_bold-italic, _\*\***underlined \*\*and ~~struck out ~~ text. Then, we have a superscript and a subscript. Now we see some red, green and blue text. Some text with a yellow highlight. Some text in a box. Some text in inverse video.
+Here is some **bold, \***italic, \***_bold-italic, _****underlined **and ~~struck out ~~ text. Then, we have a superscript and a subscript. Now we see some red, green and blue text. Some text with a yellow highlight. Some text in a box. Some text in inverse video.
 
 A paragraph with styled text: subtle emphasis followed by strong text and intense emphasis. This paragraph uses document wide styles for styling rather than inline text properties as demonstrated in the previous paragraph — calibre can handle both with equal ease.
 

@@ -22,7 +22,7 @@ export class CopilotContextService {
 
   constructor(private readonly db: PrismaClient) {}
 
-  private saveContext(
+  private cacheSession(
     workspaceId: string,
     id: string,
     config: ContextConfig
@@ -43,7 +43,7 @@ export class CopilotContextService {
       if (ret) {
         const config = ContextConfigSchema.safeParse(ret.config);
         if (config.success)
-          return this.saveContext(workspaceId, id, config.data);
+          return this.cacheSession(workspaceId, id, config.data);
         throw new Error('Invalid context config');
       }
     }
@@ -52,7 +52,7 @@ export class CopilotContextService {
       data: { workspaceId, config: { files: [] } },
     });
     const config = ContextConfigSchema.parse(context.config);
-    return this.saveContext(workspaceId, context.id, config);
+    return this.cacheSession(workspaceId, context.id, config);
   }
 }
 
