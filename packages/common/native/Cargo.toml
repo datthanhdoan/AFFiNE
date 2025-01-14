@@ -3,14 +3,29 @@ edition = "2021"
 name    = "affine_common"
 version = "0.1.0"
 
+[features]
+default    = ["doc-loader"]
+doc-loader = ["async-trait", "docx-parser", "futures", "futures-util", "infer", "langchain-rust", "path-ext", "pdf-extract"]
+
 [dependencies]
 chrono = { workspace = true }
 rand   = { workspace = true }
 sha3   = { workspace = true }
 
+async-trait    = { version = "0.1.85", optional = true }
+docx-parser    = { git = "https://github.com/toeverything/docx-parser", optional = true }
+futures        = { version = "0.3.31", optional = true }
+futures-util   = { version = "0.3.31", optional = true }
+infer          = { version = "0.16.0", optional = true }
+langchain-rust = { git = "https://github.com/Abraxas-365/langchain-rust", rev = "a244a77", features = ["tree-sitter"], optional = true }
+path-ext       = { version = "0.1.1", optional = true }
+pdf-extract    = { version = "0.8.0", optional = true }
+
 [dev-dependencies]
+
 criterion2 = { workspace = true }
 rayon      = { workspace = true }
+tokio      = { workspace = true }
 
 [[bench]]
 harness = false
