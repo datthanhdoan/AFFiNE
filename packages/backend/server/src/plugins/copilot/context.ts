@@ -1,8 +1,10 @@
+import type { File } from 'node:buffer';
+
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 
-// import type { FileLike } from './types';
+import { parseDoc } from '../../native';
 
 const ContextConfigSchema = z.object({
   files: z
@@ -74,7 +76,16 @@ export class ContextSession implements AsyncDisposable {
 
   async list() {}
 
-  // async add(content: FileLike, signal?: AbortSignal) {}
+  async add(content: File, signal?: AbortSignal) {
+    if (signal?.aborted) return;
+    const doc = await parseDoc(content.name, await content.bytes());
+    if (doc && !signal?.aborted) {
+      // const chunks = Array.from(doc.iter()).map(c => ({
+      //   index: c.index,
+      //   content: c.content,
+      // }));
+    }
+  }
 
   // async remove(fileId: string) {}
 

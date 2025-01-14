@@ -10,10 +10,10 @@ use langchain_rust::{
 use path_ext::PathExt;
 use std::path::PathBuf;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Chunk {
   pub index: usize,
-  pub text: String,
+  pub content: String,
   pub start: Option<usize>,
   pub end: Option<usize>,
 }
@@ -111,7 +111,7 @@ impl Doc {
         .filter_map(|(index, d)| {
           d.ok().map(|d| Chunk {
             index,
-            text: d.page_content,
+            content: d.page_content,
             ..Chunk::default()
           })
         })
@@ -175,7 +175,7 @@ mod tests {
       for chunk in doc.chunks.iter() {
         let output =
           read_to_string(fixtures.join(format!("{}.{}.md", fixture, chunk.index))).unwrap();
-        assert_eq!(chunk.text, output);
+        assert_eq!(chunk.content, output);
       }
     }
   }

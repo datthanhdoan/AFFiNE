@@ -16,4 +16,4 @@ use std::{
 use docx_loader::DocxLoader;
 use pdf_loader::PdfExtractLoader;
 
-pub use document::Doc;
+pub use document::{Chunk, Doc};
