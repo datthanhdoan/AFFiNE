@@ -11,7 +11,7 @@ export class ContextService {
 
   private saveContext(store: VectorStore) {
     const context = new Context(this.client, store);
-    // TODO(darkskygit): save to redis to share between pods
+    // TODO(@darkskygit): save to redis to share between pods
     this.storeIdMap.set(context.name, context.id);
     this.storeMap.set(context.name, context);
     return context;
