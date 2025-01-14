@@ -163,7 +163,6 @@ export enum CopilotProviderType {
 
 export enum CopilotCapability {
   TextToText = 'text-to-text',
-  TextToTextWithContext = 'text-to-text-with-context',
   TextToEmbedding = 'text-to-embedding',
   TextToImage = 'text-to-image',
   ImageToImage = 'image-to-image',
@@ -180,14 +179,6 @@ const CopilotChatOptionsSchema = CopilotProviderOptionsSchema.merge(
 ).optional();
 
 export type CopilotChatOptions = z.infer<typeof CopilotChatOptionsSchema>;
-
-const CopilotChatWithContextOptionsSchema = CopilotProviderOptionsSchema.merge(
-  z.object({ contextId: z.string().optional() }).strict()
-);
-
-export type CopilotChatWithContextOptions = z.infer<
-  typeof CopilotChatWithContextOptionsSchema
->;
 
 const CopilotEmbeddingOptionsSchema = CopilotProviderOptionsSchema.extend({
   dimensions: z.number(),
@@ -211,7 +202,7 @@ export type CopilotContextFile = {
   id: string; // fileId
   created_at: number;
   // embedding status
-  status: 'in_progress' | 'completed' | 'cancelled' | 'failed';
+  status: 'in_progress' | 'completed' | 'failed';
 };
 
 /**
@@ -238,13 +229,6 @@ export interface FileLike extends BlobLike {
   readonly name: string;
 }
 
-export interface CopilotContext {
-  list(): Promise<CopilotContextFile[]>;
-  add(content: FileLike, signal?: AbortSignal): Promise<string>;
-  addByFileId(context: string, signal?: AbortSignal): Promise<string>;
-  remove(fileId: string): Promise<boolean>;
-}
-
 export interface CopilotProvider {
   readonly type: CopilotProviderType;
   getCapabilities(): CopilotCapability[];
@@ -262,20 +246,6 @@ export interface CopilotTextToTextProvider extends CopilotProvider {
     model?: string,
     options?: CopilotChatOptions
   ): AsyncIterable<string>;
-}
-
-export interface CopilotTextToTextWithContextProvider extends CopilotProvider {
-  generateText(
-    messages: PromptMessage[],
-    model?: string,
-    options?: CopilotChatWithContextOptions
-  ): Promise<string>;
-  generateTextStream(
-    messages: PromptMessage[],
-    model?: string,
-    options?: CopilotChatOptions
-  ): AsyncIterable<string>;
-  getContext(name: string, id?: string): Promise<CopilotContext>;
 }
 
 export interface CopilotTextToEmbeddingProvider extends CopilotProvider {
@@ -327,7 +297,6 @@ export interface CopilotImageToImageProvider extends CopilotProvider {
 
 export type CapabilityToCopilotProvider = {
   [CopilotCapability.TextToText]: CopilotTextToTextProvider;
-  [CopilotCapability.TextToTextWithContext]: CopilotTextToTextWithContextProvider;
   [CopilotCapability.TextToEmbedding]: CopilotTextToEmbeddingProvider;
   [CopilotCapability.TextToImage]: CopilotTextToImageProvider;
   [CopilotCapability.ImageToText]: CopilotImageToTextProvider;
