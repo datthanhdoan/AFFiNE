@@ -15,6 +15,20 @@ impl PdfExtractLoader {
   }
 }
 
+impl PdfExtractLoader {
+  fn extract_text(&self) -> Result<String, LoaderError> {
+    let mut buffer: Vec<u8> = Vec::new();
+    let mut output = PlainTextOutput::new(&mut buffer as &mut dyn std::io::Write);
+    output_doc(&self.document, &mut output).map_err(|e| LoaderError::OtherError(e.to_string()))?;
+    Ok(String::from_utf8(buffer)?)
+  }
+
+  fn extract_text_to_doc(&self) -> Result<Document, LoaderError> {
+    let text = self.extract_text()?;
+    Ok(Document::new(text))
+  }
+}
+
 #[async_trait]
 impl Loader for PdfExtractLoader {
   async fn load(
@@ -23,11 +37,7 @@ impl Loader for PdfExtractLoader {
     Pin<Box<dyn Stream<Item = Result<Document, LoaderError>> + Send + 'static>>,
     LoaderError,
   > {
-    let mut buffer: Vec<u8> = Vec::new();
-    let mut output = PlainTextOutput::new(&mut buffer as &mut dyn std::io::Write);
-    output_doc(&self.document, &mut output).map_err(|e| LoaderError::OtherError(e.to_string()))?;
-
-    let doc = langchain_rust::schemas::Document::new(String::from_utf8(buffer)?);
+    let doc = self.extract_text_to_doc()?;
     let stream = stream::iter(vec![Ok(doc)]);
     Ok(Box::pin(stream))
   }
@@ -39,18 +49,9 @@ impl Loader for PdfExtractLoader {
     Pin<Box<dyn Stream<Item = Result<Document, LoaderError>> + Send + 'static>>,
     LoaderError,
   > {
-    let stream = self
-      .load()
-      .await?
-      .and_then(|doc| async {
-        splitter
-          .split_documents(&[doc])
-          .await
-          .map_err(LoaderError::TextSplitterError)
-      })
-      .into_inner();
-
-    Ok(Box::pin(stream))
+    let doc = self.extract_text_to_doc()?;
+    let stream = splitter.split_documents(&[doc]).await?;
+    Ok(Box::pin(stream::iter(stream.into_iter().map(Ok))))
   }
 }
 

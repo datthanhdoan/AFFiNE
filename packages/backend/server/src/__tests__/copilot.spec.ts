@@ -9,6 +9,7 @@ import { ConfigModule } from '../base/config';
 import { AuthService } from '../core/auth';
 import { QuotaModule } from '../core/quota';
 import { CopilotModule } from '../plugins/copilot';
+import { CopilotContextService } from '../plugins/copilot/context';
 import { prompts, PromptService } from '../plugins/copilot/prompt';
 import {
   CopilotProviderService,
@@ -47,6 +48,7 @@ import { MockCopilotTestProvider, WorkflowTestCases } from './utils/copilot';
 const test = ava as TestFn<{
   auth: AuthService;
   module: TestingModule;
+  context: CopilotContextService;
   prompt: PromptService;
   provider: CopilotProviderService;
   session: ChatSessionService;
@@ -83,6 +85,7 @@ test.beforeEach(async t => {
   });
 
   const auth = module.get(AuthService);
+  const context = module.get(CopilotContextService);
   const prompt = module.get(PromptService);
   const provider = module.get(CopilotProviderService);
   const session = module.get(ChatSessionService);
@@ -90,6 +93,7 @@ test.beforeEach(async t => {
 
   t.context.module = module;
   t.context.auth = auth;
+  t.context.context = context;
   t.context.prompt = prompt;
   t.context.provider = provider;
   t.context.session = session;
@@ -1246,4 +1250,27 @@ test('CitationParser should not replace chunks of citation already with URLs', t
     `[^3]: {"type":"url","url":"${encodeURIComponent(citations[2])}"}`,
   ].join('\n');
   t.is(result, expected);
+});
+
+// ==================== context ====================
+test('should be able to manage context', async t => {
+  const { context } = t.context;
+
+  const session = await context.getOrCreate('test');
+  t.is(session.workspaceId, 'test', 'should get workspace id');
+
+  const fs = await import('node:fs');
+  const buffer = fs.readFileSync('/Users/ds/Downloads/算法.pdf');
+  const file = new File([buffer], '算法.pdf', { type: 'application/pdf' });
+
+  const fileId = await session.add(file);
+  const list = await session.list();
+  t.deepEqual(
+    list.map(f => f.id),
+    [fileId],
+    'should list file id'
+  );
+
+  const result = await session.match('有向无环图', 5);
+  console.log(result);
 });

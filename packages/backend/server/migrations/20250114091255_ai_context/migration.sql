@@ -44,7 +44,10 @@ ALTER TABLE "ai_context_embeddings" ADD CONSTRAINT "ai_context_embeddings_contex
 ALTER TABLE "ai_workspace_embeddings" ADD CONSTRAINT "ai_workspace_embeddings_workspace_id_doc_id_fkey" FOREIGN KEY ("workspace_id", "doc_id") REFERENCES "snapshots"("workspace_id", "guid") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- CreateIndex
-CREATE INDEX IF NOT EXISTS ai_context_embeddings_idx ON ai_context_embeddings USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS "ai_context_embeddings_idx" ON ai_context_embeddings USING hnsw (embedding vector_cosine_ops);
 
 -- CreateIndex
-CREATE INDEX IF NOT EXISTS ai_workspace_embeddings_idx ON ai_workspace_embeddings USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS "ai_workspace_embeddings_idx" ON ai_workspace_embeddings USING hnsw (embedding vector_cosine_ops);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_context_embeddings_context_id_file_id_chunk_key" ON "ai_context_embeddings"("context_id", "file_id", "chunk");

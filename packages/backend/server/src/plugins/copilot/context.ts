@@ -1,7 +1,8 @@
 import type { File } from 'node:buffer';
+import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import OpenAI from 'openai';
 import { z } from 'zod';
@@ -39,7 +40,7 @@ export class CopilotContextService {
   ) {
     const configure = config.plugins.copilot.openai;
     if (configure) {
-      this.client = new OpenAI();
+      this.client = new OpenAI(configure);
     }
   }
 
@@ -112,9 +113,47 @@ export class ContextSession implements AsyncDisposable {
     return this.config.files.map(f => ({ ...f }));
   }
 
-  async add(content: File, signal?: AbortSignal) {
+  private processEmbeddings(
+    fileId: string,
+    input: string[],
+    embeddings: OpenAI.Embeddings.Embedding[]
+  ) {
+    const groups = embeddings.map(e => [
+      randomUUID(),
+      this.contextId,
+      fileId,
+      e.index,
+      input[e.index],
+      Prisma.raw(`'[${e.embedding.join(',')}]'`),
+      new Date(),
+    ]);
+    return Prisma.join(groups.map(row => Prisma.sql`(${Prisma.join(row)})`));
+  }
+
+  private async insertEmbeddings(
+    name: string,
+    input: string[],
+    embeddings: OpenAI.Embeddings.Embedding[]
+  ) {
+    const fileId = nanoid();
+    const values = this.processEmbeddings(fileId, input, embeddings);
+    return this.db.$transaction(async tx => {
+      await tx.$executeRaw`
+        INSERT INTO "ai_context_embeddings"
+        ("id", "context_id", "file_id", "chunk", "content", "embedding", "updated_at") VALUES ${values}
+        ON CONFLICT (context_id, file_id, chunk) DO UPDATE SET
+        content = EXCLUDED.content, embedding = EXCLUDED.embedding, updated_at = excluded.updated_at;
+      `;
+      this.config.files.push({ id: fileId, chunk_size: input.length, name });
+      await this.save(tx);
+      return fileId;
+    });
+  }
+
+  async add(content: File, signal?: AbortSignal): Promise<string | undefined> {
     if (signal?.aborted) return;
-    const doc = await parseDoc(content.name, await content.bytes());
+    const buffer = new Uint8Array(await content.arrayBuffer());
+    const doc = await parseDoc(content.name, buffer);
     if (doc && !signal?.aborted) {
       const input = doc.chunks
         .toSorted((a, b) => a.index - b.index)
@@ -123,32 +162,14 @@ export class ContextSession implements AsyncDisposable {
         {
           input,
           model: 'text-embedding-3-small',
-          dimensions: 256,
+          dimensions: 512,
           encoding_format: 'float',
         },
         { signal }
       );
-      const fileId = nanoid();
-      const query = embeddings.data
-        .map(
-          e =>
-            `(${this.contextId}, ${fileId}, ${e.index}, "${input[e.index]}", [${e.embedding.join(',')}]:vector)`
-        )
-        .join(', ');
-      await this.db.$transaction(async tx => {
-        await tx.$executeRaw`
-          INSERT INTO "ai_context_embeddings" ("context_id", "file_id", "chunk", "content", "embedding")
-          VALUES ${query} ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding
-        `;
-        this.config.files.push({
-          id: fileId,
-          chunk_size: input.length,
-          name: content.name,
-        });
-        await this.save(tx);
-      });
+      return await this.insertEmbeddings(content.name, input, embeddings.data);
     }
-    return [];
+    return undefined;
   }
 
   async remove(fileId: string) {
@@ -161,13 +182,17 @@ export class ContextSession implements AsyncDisposable {
     });
   }
 
-  async match(content: string, topK: number, signal?: AbortSignal) {
+  async match(
+    content: string,
+    topK: number,
+    signal?: AbortSignal
+  ): Promise<FileChunkSimilarity[]> {
     const embedding = await this.embeddings
       .create(
         {
           input: content,
           model: 'text-embedding-3-small',
-          dimensions: 256,
+          dimensions: 512,
           encoding_format: 'float',
         },
         { signal }

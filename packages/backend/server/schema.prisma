@@ -445,6 +445,7 @@ model AiContextEmbedding {
 
   context AiContext @relation(fields: [contextId], references: [id], onDelete: Cascade)
 
+  @@unique([contextId, fileId, chunk])
   @@index([embedding], map: "ai_context_embeddings_idx")
   @@map("ai_context_embeddings")
 }

@@ -1,7 +1,6 @@
 use super::*;
 use async_trait::async_trait;
 use docx_parser::MarkdownDocument;
-use futures::{stream, Stream, TryStreamExt};
 use langchain_rust::schemas::Document;
 
 #[derive(Debug)]
@@ -15,6 +14,14 @@ impl DocxLoader {
       document: MarkdownDocument::from_reader(reader)?,
     })
   }
+
+  fn extract_text(&self) -> String {
+    self.document.to_markdown(false)
+  }
+
+  fn extract_text_to_doc(&self) -> Document {
+    Document::new(self.extract_text())
+  }
 }
 
 #[async_trait]
@@ -25,7 +32,7 @@ impl Loader for DocxLoader {
     Pin<Box<dyn Stream<Item = Result<Document, LoaderError>> + Send + 'static>>,
     LoaderError,
   > {
-    let doc = Document::new(self.document.to_markdown(false));
+    let doc = self.extract_text_to_doc();
     let stream = stream::iter(vec![Ok(doc)]);
     Ok(Box::pin(stream))
   }
@@ -37,18 +44,9 @@ impl Loader for DocxLoader {
     Pin<Box<dyn Stream<Item = Result<Document, LoaderError>> + Send + 'static>>,
     LoaderError,
   > {
-    let stream = self
-      .load()
-      .await?
-      .and_then(|doc| async {
-        splitter
-          .split_documents(&[doc])
-          .await
-          .map_err(LoaderError::TextSplitterError)
-      })
-      .into_inner();
-
-    Ok(Box::pin(stream))
+    let doc = self.extract_text_to_doc();
+    let stream = splitter.split_documents(&[doc]).await?;
+    Ok(Box::pin(stream::iter(stream.into_iter().map(Ok))))
   }
 }
 

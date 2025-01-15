@@ -3,7 +3,7 @@ mod docx_loader;
 mod pdf_loader;
 
 use async_trait::async_trait;
-use futures::{stream, Stream, TryStreamExt};
+use futures::{stream, Stream};
 use langchain_rust::{
   document_loaders::{Loader, LoaderError},
   text_splitter::TextSplitter,
