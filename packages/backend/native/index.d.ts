@@ -2,17 +2,7 @@
 /* eslint-disable */
 export declare class Document {
   get name(): string
-  iter(): DocumentChunkIterator
-}
-
-export declare class DocumentChunk {
-  constructor(index: number, content: string)
-  get index(): number
-  get content(): string
-}
-
-export declare class DocumentChunkIterator {
-  [Symbol.iterator](): Iterator<DocumentChunk, void, number | undefined | null>
+  get chunks(): Array<{index: number, content: string}>
 }
 
 export declare class Tokenizer {

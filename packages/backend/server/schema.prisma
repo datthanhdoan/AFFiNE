@@ -432,12 +432,13 @@ model AiContext {
 }
 
 model AiContextEmbedding {
-  id        String                      @id @default(uuid()) @db.VarChar
-  contextId String                      @map("context_id") @db.VarChar
-  fileId    String                      @map("file_id") @db.VarChar
+  id        String                     @id @default(uuid()) @db.VarChar
+  contextId String                     @map("context_id") @db.VarChar
+  fileId    String                     @map("file_id") @db.VarChar
   // a file can be divided into multiple chunks and embedded separately.
-  chunk     Int                         @db.Integer
-  embedding Unsupported("vector(1536)")
+  chunk     Int                        @db.Integer
+  content   String                     @db.VarChar
+  embedding Unsupported("vector(512)")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
