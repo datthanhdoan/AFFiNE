@@ -4,7 +4,6 @@
 
 input AddContextFileInput {
   blobId: String!
-  content: Upload!
   contextId: String!
   fileName: String!
 }
@@ -38,6 +37,13 @@ enum ContextFileStatus {
   processing
 }
 
+type ContextMatchedFileChunk {
+  chunk: SafeInt!
+  content: String!
+  distance: Float
+  fileId: String!
+}
+
 type Copilot {
   """Get the session list of actions in the workspace"""
   actions: [String!]!
@@ -62,10 +68,15 @@ type CopilotContext {
 
 type CopilotContextFile {
   blobId: String!
-  chunk_size: Int!
+  chunk_size: SafeInt!
   id: ID!
   name: String!
   status: ContextFileStatus!
+}
+
+type CopilotFailedToModifyContextDataType {
+  contextId: String!
+  message: String!
 }
 
 type CopilotHistories {
@@ -77,6 +88,10 @@ type CopilotHistories {
 
   """The number of tokens used in the session"""
   tokens: Int!
+}
+
+type CopilotInvalidContextDataType {
+  contextId: String!
 }
 
 type CopilotMessageNotFoundDataType {
@@ -239,7 +254,7 @@ type EditorType {
   name: String!
 }
 
-union ErrorDataUnion = AlreadyInSpaceDataType | BlobNotFoundDataType | CopilotMessageNotFoundDataType | CopilotPromptNotFoundDataType | CopilotProviderSideErrorDataType | DocAccessDeniedDataType | DocHistoryNotFoundDataType | DocNotFoundDataType | InvalidEmailDataType | InvalidHistoryTimestampDataType | InvalidLicenseUpdateParamsDataType | InvalidPasswordLengthDataType | InvalidRuntimeConfigTypeDataType | MemberNotFoundInSpaceDataType | MissingOauthQueryParameterDataType | NotInSpaceDataType | QueryTooLongDataType | RuntimeConfigNotFoundDataType | SameSubscriptionRecurringDataType | SpaceAccessDeniedDataType | SpaceNotFoundDataType | SpaceOwnerNotFoundDataType | SubscriptionAlreadyExistsDataType | SubscriptionNotExistsDataType | SubscriptionPlanNotFoundDataType | UnknownOauthProviderDataType | UnsupportedSubscriptionPlanDataType | VersionRejectedDataType | WorkspaceMembersExceedLimitToDowngradeDataType | WrongSignInCredentialsDataType
+union ErrorDataUnion = AlreadyInSpaceDataType | BlobNotFoundDataType | CopilotFailedToModifyContextDataType | CopilotInvalidContextDataType | CopilotMessageNotFoundDataType | CopilotPromptNotFoundDataType | CopilotProviderSideErrorDataType | DocAccessDeniedDataType | DocHistoryNotFoundDataType | DocNotFoundDataType | InvalidEmailDataType | InvalidHistoryTimestampDataType | InvalidLicenseUpdateParamsDataType | InvalidPasswordLengthDataType | InvalidRuntimeConfigTypeDataType | MemberNotFoundInSpaceDataType | MissingOauthQueryParameterDataType | NotInSpaceDataType | QueryTooLongDataType | RuntimeConfigNotFoundDataType | SameSubscriptionRecurringDataType | SpaceAccessDeniedDataType | SpaceNotFoundDataType | SpaceOwnerNotFoundDataType | SubscriptionAlreadyExistsDataType | SubscriptionNotExistsDataType | SubscriptionPlanNotFoundDataType | UnknownOauthProviderDataType | UnsupportedSubscriptionPlanDataType | VersionRejectedDataType | WorkspaceMembersExceedLimitToDowngradeDataType | WrongSignInCredentialsDataType
 
 enum ErrorNames {
   ACCESS_DENIED
@@ -255,6 +270,7 @@ enum ErrorNames {
   COPILOT_ACTION_TAKEN
   COPILOT_FAILED_TO_CREATE_MESSAGE
   COPILOT_FAILED_TO_GENERATE_TEXT
+  COPILOT_FAILED_TO_MATCH_CONTEXT
   COPILOT_FAILED_TO_MODIFY_CONTEXT
   COPILOT_INVALID_CONTEXT
   COPILOT_MESSAGE_NOT_FOUND
@@ -524,6 +540,12 @@ input ManageUserInput {
   name: String
 }
 
+input MatchContextInput {
+  content: String!
+  contextId: String!
+  limit: SafeInt
+}
+
 type MemberNotFoundInSpaceDataType {
   spaceId: String!
 }
@@ -537,7 +559,7 @@ type Mutation {
   activateLicense(license: String!, workspaceId: String!): License!
 
   """add a file to context"""
-  addContextFile(options: AddContextFileInput!): String!
+  addContextFile(content: Upload!, options: AddContextFileInput!): String!
   addWorkspaceFeature(feature: FeatureType!, workspaceId: String!): Int!
   approveMember(userId: String!, workspaceId: String!): String!
   cancelSubscription(idempotencyKey: String @deprecated(reason: "use header `Idempotency-Key`"), plan: SubscriptionPlan = Pro, workspaceId: String): SubscriptionType!
@@ -590,6 +612,9 @@ type Mutation {
   invite(email: String!, permission: Permission @deprecated(reason: "never used"), sendInviteMail: Boolean, workspaceId: String!): String!
   inviteBatch(emails: [String!]!, sendInviteMail: Boolean, workspaceId: String!): [InviteResult!]!
   leaveWorkspace(sendLeaveMail: Boolean, workspaceId: String!, workspaceName: String @deprecated(reason: "no longer used")): Boolean!
+
+  """remove a file from context"""
+  matchContext(options: MatchContextInput!): [ContextMatchedFileChunk!]!
   publishPage(mode: PublicPageMode = Page, pageId: String!, workspaceId: String!): WorkspacePage!
   recoverDoc(guid: String!, timestamp: DateTime!, workspaceId: String!): DateTime!
   releaseDeletedBlobs(workspaceId: String!): Boolean!

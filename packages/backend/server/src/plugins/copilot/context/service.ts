@@ -50,7 +50,7 @@ export class CopilotContextService {
       data: { sessionId, config: { files: [] } },
     });
     const config = ContextConfigSchema.parse(context.config);
-    return this.cacheSession(sessionId, config);
+    return this.cacheSession(context.id, config);
   }
 
   async get(id: string): Promise<ContextSession> {

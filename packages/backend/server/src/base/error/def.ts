@@ -1,4 +1,5 @@
 import { STATUS_CODES } from 'node:http';
+import { escape } from 'node:querystring';
 
 import { HttpStatus, Logger } from '@nestjs/common';
 import { capitalize } from 'lodash-es';
@@ -578,6 +579,12 @@ export const USER_FRIENDLY_ERRORS = {
     args: { contextId: 'string', message: 'string' },
     message: ({ contextId, message }) =>
       `Failed to modify context ${contextId}: ${message}`,
+  },
+  copilot_failed_to_match_context: {
+    type: 'internal_server_error',
+    args: { contextId: 'string', content: 'string', message: 'string' },
+    message: ({ contextId, content, message }) =>
+      `Failed to match context ${contextId} with "${escape(content)}": ${message}`,
   },
 
   // Quota & Limit errors

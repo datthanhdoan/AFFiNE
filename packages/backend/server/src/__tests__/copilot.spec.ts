@@ -1,5 +1,7 @@
 /// <reference types="../global.d.ts" />
 
+import { randomUUID } from 'node:crypto';
+
 import { TestingModule } from '@nestjs/testing';
 import type { TestFn } from 'ava';
 import ava from 'ava';
@@ -1255,13 +1257,33 @@ test('CitationParser should not replace chunks of citation already with URLs', t
 
 // ==================== context ====================
 test('should be able to manage context', async t => {
-  const { context } = t.context;
+  const { context, prompt, session } = t.context;
+
+  await prompt.set('prompt', 'model', [
+    { role: 'system', content: 'hello {{word}}' },
+  ]);
+  const chatSession = await session.create({
+    docId: 'test',
+    workspaceId: 'test',
+    userId,
+    promptName: 'prompt',
+  });
 
   // use mocked embedding client
   Sinon.stub(context, 'embeddingClient').get(() => new MockEmbeddingClient());
 
-  const session = await context.getOrCreate('test');
-  t.is(session.workspaceId, 'test', 'should get workspace id');
+  {
+    await t.throwsAsync(
+      context.create(randomUUID()),
+      { instanceOf: Error },
+      'should throw error if create context with invalid session id'
+    );
+
+    await t.notThrowsAsync(
+      context.create(chatSession),
+      'should create context with chat session'
+    );
+  }
 
   const fs = await import('node:fs');
   const buffer = fs.readFileSync(
@@ -1269,20 +1291,24 @@ test('should be able to manage context', async t => {
   );
   const file = new File([buffer], 'sample.pdf', { type: 'application/pdf' });
 
-  const fileId = await session.add(file);
-  const list = await session.list();
-  t.deepEqual(
-    list.map(f => f.chunk_size),
-    [3],
-    'should split file correctly'
-  );
-  t.deepEqual(
-    list.map(f => f.id),
-    [fileId],
-    'should list file id'
-  );
+  {
+    const session = await context.create(chatSession);
 
-  const result = await session.match('test', 2);
-  t.is(result.length, 2, 'should match context');
-  t.is(result[0].fileId, fileId!, 'should match file id');
+    const fileId = await session.add(file, randomUUID());
+    const list = await session.list();
+    t.deepEqual(
+      list.map(f => f.chunk_size),
+      [3],
+      'should split file correctly'
+    );
+    t.deepEqual(
+      list.map(f => f.id),
+      [fileId],
+      'should list file id'
+    );
+
+    const result = await session.match('test', 2);
+    t.is(result.length, 2, 'should match context');
+    t.is(result[0].fileId, fileId!, 'should match file id');
+  }
 });

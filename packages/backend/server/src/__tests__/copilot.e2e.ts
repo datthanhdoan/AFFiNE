@@ -11,6 +11,8 @@ import { ConfigModule } from '../base/config';
 import { AuthService } from '../core/auth';
 import { WorkspaceModule } from '../core/workspaces';
 import { CopilotModule } from '../plugins/copilot';
+import { CopilotContextService } from '../plugins/copilot/context';
+import { MockEmbeddingClient } from '../plugins/copilot/context/embedding';
 import { prompts, PromptService } from '../plugins/copilot/prompt';
 import {
   CopilotProviderService,
@@ -29,15 +31,20 @@ import {
   signUp,
 } from './utils';
 import {
+  addContextFile,
   array2sse,
   chatWithImages,
   chatWithText,
   chatWithTextStream,
   chatWithWorkflow,
+  createCopilotContext,
   createCopilotMessage,
   createCopilotSession,
   forkCopilotSession,
   getHistories,
+  listContext,
+  listContextFiles,
+  matchContext,
   MockCopilotTestProvider,
   sse2array,
   textToEventStream,
@@ -48,6 +55,7 @@ import {
 const test = ava as TestFn<{
   auth: AuthService;
   app: INestApplication;
+  context: CopilotContextService;
   prompt: PromptService;
   provider: CopilotProviderService;
   storage: CopilotStorage;
@@ -78,11 +86,13 @@ test.beforeEach(async t => {
   });
 
   const auth = app.get(AuthService);
+  const context = app.get(CopilotContextService);
   const prompt = app.get(PromptService);
   const storage = app.get(CopilotStorage);
 
   t.context.app = app;
   t.context.auth = auth;
+  t.context.context = context;
   t.context.prompt = prompt;
   t.context.storage = storage;
 });
@@ -725,4 +735,75 @@ test('should be able to search image from unsplash', async t => {
 
   const resp = await unsplashSearch(app, token);
   t.not(resp.status, 404, 'route should be exists');
+});
+
+test.only('should be able to manage context', async t => {
+  const { app, context } = t.context;
+
+  const { id: workspaceId } = await createWorkspace(app, token);
+  const sessionId = await createCopilotSession(
+    app,
+    token,
+    workspaceId,
+    randomUUID(),
+    promptName
+  );
+
+  // use mocked embedding client
+  Sinon.stub(context, 'embeddingClient').get(() => new MockEmbeddingClient());
+
+  {
+    await t.throwsAsync(
+      createCopilotContext(app, token, workspaceId, randomUUID()),
+      { instanceOf: Error },
+      'should throw error if create context with invalid session id'
+    );
+
+    const context = createCopilotContext(app, token, workspaceId, sessionId);
+    await t.notThrowsAsync(context, 'should create context with chat session');
+
+    const list = await listContext(app, token, workspaceId, sessionId);
+    t.deepEqual(list, [{ id: await context }], 'should list context');
+  }
+
+  const fs = await import('node:fs');
+  const buffer = fs.readFileSync(
+    new URL('../../../../common/native/fixtures/sample.pdf', import.meta.url)
+  );
+
+  {
+    const contextId = await createCopilotContext(
+      app,
+      token,
+      workspaceId,
+      sessionId
+    );
+
+    const fileId = await addContextFile(
+      app,
+      token,
+      contextId,
+      randomUUID(),
+      'sample.pdf',
+      buffer
+    );
+    const [file] =
+      (await listContextFiles(app, token, workspaceId, sessionId, contextId)) ||
+      [];
+    t.is(file.id, fileId, 'should list file');
+    t.is(file.status, 'finished', 'should list file status');
+    t.is(file.name, 'sample.pdf', 'should list file name');
+    t.is(file.chunk_size, 3, 'should split file into chunks');
+
+    const result = (await matchContext(
+      app,
+      token,
+      sessionId,
+      contextId,
+      'test',
+      2
+    ))!;
+    t.is(result.length, 2, 'should match context');
+    t.is(result[0].fileId, fileId, 'should match file id');
+  }
 });

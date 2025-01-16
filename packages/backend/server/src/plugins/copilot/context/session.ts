@@ -151,7 +151,7 @@ export class ContextSession implements AsyncDisposable {
 
   async match(
     content: string,
-    topK: number,
+    topK: number = 5,
     signal?: AbortSignal
   ): Promise<FileChunkSimilarity[]> {
     const embedding = await this.client

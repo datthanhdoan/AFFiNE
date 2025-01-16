@@ -1,7 +1,8 @@
-import { Req } from '@nestjs/common';
 import {
   Args,
+  Context,
   Field,
+  Float,
   ID,
   InputType,
   Mutation,
@@ -12,13 +13,15 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import type { Request } from 'express';
+import { SafeIntResolver } from 'graphql-scalars';
 import GraphQLUpload from 'graphql-upload/GraphQLUpload.mjs';
 
 import {
   CallMetric,
+  CopilotFailedToMatchContext,
   CopilotFailedToModifyContext,
   CopilotSessionNotFound,
-  FileUpload,
+  type FileUpload,
   RequestMutex,
   Throttle,
   TooManyRequest,
@@ -27,7 +30,11 @@ import { CurrentUser } from '../../../core/auth';
 import { COPILOT_LOCKER, CopilotType } from '../resolver';
 import { ChatSessionService } from '../session';
 import { CopilotContextService } from './service';
-import { type ContextFile, ContextFileStatus } from './types';
+import {
+  type ContextFile,
+  ContextFileStatus,
+  FileChunkSimilarity,
+} from './types';
 
 @InputType()
 class AddContextFileInput {
@@ -39,9 +46,6 @@ class AddContextFileInput {
 
   @Field(() => String)
   blobId!: string;
-
-  @Field(() => GraphQLUpload)
-  content!: Promise<FileUpload>;
 }
 
 @InputType()
@@ -51,6 +55,18 @@ class RemoveContextFileInput {
 
   @Field(() => String)
   fileId!: string;
+}
+
+@InputType()
+class MatchContextInput {
+  @Field(() => String)
+  contextId!: string;
+
+  @Field(() => String)
+  content!: string;
+
+  @Field(() => SafeIntResolver, { nullable: true })
+  limit?: number;
 }
 
 @ObjectType('CopilotContext')
@@ -69,7 +85,7 @@ class CopilotContextFile implements ContextFile {
   @Field(() => String)
   name!: string;
 
-  @Field(() => Number)
+  @Field(() => SafeIntResolver)
   chunk_size!: number;
 
   @Field(() => ContextFileStatus)
@@ -77,6 +93,21 @@ class CopilotContextFile implements ContextFile {
 
   @Field(() => String)
   blobId!: string;
+}
+
+@ObjectType()
+class ContextMatchedFileChunk implements FileChunkSimilarity {
+  @Field(() => String)
+  fileId!: string;
+
+  @Field(() => SafeIntResolver)
+  chunk!: number;
+
+  @Field(() => String)
+  content!: string;
+
+  @Field(() => Float, { nullable: true })
+  distance!: number | null;
 }
 
 @Throttle()
@@ -182,9 +213,11 @@ export class CopilotContextResolver {
   })
   @CallMetric('ai', 'context_file_add')
   async addContextFile(
-    @Req() req: Request,
+    @Context() ctx: { req: Request },
     @Args({ name: 'options', type: () => AddContextFileInput })
-    options: AddContextFileInput
+    options: AddContextFileInput,
+    @Args({ name: 'content', type: () => GraphQLUpload })
+    content: FileUpload
   ) {
     const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
     await using lock = await this.mutex.acquire(lockFlag);
@@ -194,8 +227,7 @@ export class CopilotContextResolver {
     const session = await this.context.get(options.contextId);
 
     try {
-      const content = await options.content;
-      const signal = this.getSignal(req);
+      const signal = this.getSignal(ctx.req);
       return await session.addStream(
         content.createReadStream(),
         content.filename,
@@ -230,6 +262,38 @@ export class CopilotContextResolver {
     } catch (e: any) {
       throw new CopilotFailedToModifyContext({
         contextId: options.contextId,
+        message: e.message,
+      });
+    }
+  }
+
+  @Mutation(() => [ContextMatchedFileChunk], {
+    description: 'remove a file from context',
+  })
+  @CallMetric('ai', 'context_file_remove')
+  async matchContext(
+    @Context() ctx: { req: Request },
+    @Args({ name: 'options', type: () => MatchContextInput })
+    options: MatchContextInput
+  ) {
+    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
+    await using lock = await this.mutex.acquire(lockFlag);
+    if (!lock) {
+      return new TooManyRequest('Server is busy');
+    }
+    const session = await this.context.get(options.contextId);
+
+    try {
+      return await session.match(
+        options.content,
+        options.limit,
+        this.getSignal(ctx.req)
+      );
+    } catch (e: any) {
+      throw new CopilotFailedToMatchContext({
+        contextId: options.contextId,
+        // don't record the large content
+        content: options.content.slice(0, 512),
         message: e.message,
       });
     }
