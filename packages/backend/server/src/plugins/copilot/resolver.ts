@@ -642,6 +642,7 @@ export class CopilotResolver {
       return await session.addStream(
         content.createReadStream(),
         content.filename,
+        options.blobId,
         signal
       );
     } catch (e: any) {
@@ -687,7 +688,7 @@ export class CopilotResolver {
   async listContextFiles(
     @Args({ name: 'options', type: () => ListContextFileInput })
     options: ListContextFileInput
-  ) {
+  ): Promise<CopilotContextFile[] | TooManyRequest> {
     const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
     await using lock = await this.mutex.acquire(lockFlag);
     if (!lock) {

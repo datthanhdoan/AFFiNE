@@ -10,6 +10,8 @@ import { OneMB } from '../../../core/quota/constant';
 import { parseDoc } from '../../../native';
 import {
   ContextConfig,
+  ContextFile,
+  ContextFileStatus,
   Embedding,
   EmbeddingClient,
   FileChunkSimilarity,
@@ -55,10 +57,18 @@ export class ContextSession implements AsyncDisposable {
 
   private async insertEmbeddings(
     name: string,
+    blobId: string,
     input: string[],
     embeddings: Embedding[]
   ) {
     const fileId = nanoid();
+    await this.saveFileRecord(fileId, file => ({
+      ...file,
+      blobId,
+      chunk_size: input.length,
+      name,
+    }));
+
     const values = this.processEmbeddings(fileId, input, embeddings);
     return this.db.$transaction(async tx => {
       await tx.$executeRaw`
@@ -67,8 +77,10 @@ export class ContextSession implements AsyncDisposable {
         ON CONFLICT (context_id, file_id, chunk) DO UPDATE SET
         content = EXCLUDED.content, embedding = EXCLUDED.embedding, updated_at = excluded.updated_at;
       `;
-      this.config.files.push({ id: fileId, chunk_size: input.length, name });
-      await this.save(tx);
+      await this.saveFileRecord(fileId, file => ({
+        ...(file as ContextFile),
+        status: ContextFileStatus.finished,
+      }));
       return fileId;
     });
   }
@@ -104,24 +116,29 @@ export class ContextSession implements AsyncDisposable {
   async addStream(
     readable: Readable,
     name: string,
+    blobId: string,
     signal?: AbortSignal
   ): Promise<string | undefined> {
     if (signal?.aborted) return;
     const buffer = await this.readStream(readable, 50 * OneMB);
     const file = new File([buffer], name);
-    return await this.add(file, signal);
+    return await this.add(file, blobId, signal);
   }
 
-  async add(content: File, signal?: AbortSignal): Promise<string | undefined> {
+  async add(
+    file: File,
+    blobId: string,
+    signal?: AbortSignal
+  ): Promise<string | undefined> {
     if (signal?.aborted) return;
-    const buffer = new Uint8Array(await content.arrayBuffer());
-    const doc = await parseDoc(content.name, buffer);
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const doc = await parseDoc(file.name, buffer);
     if (doc && !signal?.aborted) {
       const input = doc.chunks
         .toSorted((a, b) => a.index - b.index)
         .map(chunk => chunk.content);
       const embeddings = await this.client.getEmbeddings(input, signal);
-      return await this.insertEmbeddings(content.name, input, embeddings);
+      return await this.insertEmbeddings(file.name, blobId, input, embeddings);
     }
     return undefined;
   }
@@ -152,6 +169,25 @@ export class ContextSession implements AsyncDisposable {
       ORDER BY "distance" ASC
       LIMIT ${topK};
     `;
+  }
+
+  private async saveFileRecord(
+    fileId: string,
+    cb: (
+      record: Pick<ContextFile, 'id' | 'status'> &
+        Partial<Omit<ContextFile, 'id' | 'status'>>
+    ) => ContextFile,
+    tx?: PrismaTransaction
+  ) {
+    const files = this.config.files;
+    const file = files.find(f => f.id === fileId);
+    if (file) {
+      Object.assign(file, cb({ ...file }));
+    } else {
+      const file = { id: fileId, status: ContextFileStatus.processing };
+      files.push(cb(file));
+    }
+    await this.save(tx);
   }
 
   async save(tx?: PrismaTransaction) {

@@ -1,24 +1,29 @@
 import { z } from 'zod';
 
+export enum ContextFileStatus {
+  processing = 'processing',
+  finished = 'finished',
+  failed = 'failed',
+}
+
 export const ContextConfigSchema = z.object({
   files: z
     .object({
       id: z.string(),
       chunk_size: z.number(),
       name: z.string(),
-      status: z.enum(['processing', 'finished', 'failed']),
+      status: z.enum([
+        ContextFileStatus.processing,
+        ContextFileStatus.finished,
+        ContextFileStatus.failed,
+      ]),
+      blobId: z.string(),
     })
     .array(),
 });
 
 export type ContextConfig = z.infer<typeof ContextConfigSchema>;
 export type ContextFile = z.infer<typeof ContextConfigSchema>['files'][number];
-
-export enum ContextFileStatus {
-  processing = 'processing',
-  finished = 'finished',
-  failed = 'failed',
-}
 
 export type FileChunkSimilarity = {
   fileId: string;
