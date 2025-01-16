@@ -1,10 +1,12 @@
-import type { File } from 'node:buffer';
+import { File } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
 
 import { Prisma, PrismaClient } from '@prisma/client';
 import { nanoid } from 'nanoid';
 
-import { PrismaTransaction } from '../../../base';
+import { BlobQuotaExceeded, PrismaTransaction } from '../../../base';
+import { OneMB } from '../../../core/quota/constant';
 import { parseDoc } from '../../../native';
 import {
   ContextConfig,
@@ -71,6 +73,45 @@ export class ContextSession implements AsyncDisposable {
     });
   }
 
+  private readStream(
+    readable: Readable,
+    maxSize = 50 * OneMB
+  ): Promise<Buffer<ArrayBuffer>> {
+    return new Promise<Buffer<ArrayBuffer>>((resolve, reject) => {
+      const chunks: Uint8Array[] = [];
+      let totalSize = 0;
+
+      readable.on('data', chunk => {
+        totalSize += chunk.length;
+        if (totalSize > maxSize) {
+          reject(new BlobQuotaExceeded());
+          readable.destroy(new BlobQuotaExceeded());
+          return;
+        }
+        chunks.push(chunk);
+      });
+
+      readable.on('end', () => {
+        resolve(Buffer.concat(chunks, totalSize));
+      });
+
+      readable.on('error', err => {
+        reject(err);
+      });
+    });
+  }
+
+  async addStream(
+    readable: Readable,
+    name: string,
+    signal?: AbortSignal
+  ): Promise<string | undefined> {
+    if (signal?.aborted) return;
+    const buffer = await this.readStream(readable, 50 * OneMB);
+    const file = new File([buffer], name);
+    return await this.add(file, signal);
+  }
+
   async add(content: File, signal?: AbortSignal): Promise<string | undefined> {
     if (signal?.aborted) return;
     const buffer = new Uint8Array(await content.arrayBuffer());
@@ -86,12 +127,13 @@ export class ContextSession implements AsyncDisposable {
   }
 
   async remove(fileId: string) {
-    await this.db.$transaction(async tx => {
-      await tx.aiContextEmbedding.deleteMany({
+    return await this.db.$transaction(async tx => {
+      const ret = await tx.aiContextEmbedding.deleteMany({
         where: { contextId: this.contextId, fileId },
       });
       this.config.files = this.config.files.filter(f => f.id !== fileId);
       await this.save(tx);
+      return ret.count > 0;
     });
   }
 

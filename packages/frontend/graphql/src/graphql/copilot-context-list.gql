@@ -1,0 +1,9 @@
+mutation listContextFiles($options: ListContextFileInput!) {
+  listContextFiles(options: $options) {
+    id
+    name
+    chunk_size
+    status
+    blobId
+  }
+}

@@ -568,6 +568,17 @@ export const USER_FRIENDLY_ERRORS = {
     message: ({ provider, kind, message }) =>
       `Provider ${provider} failed with ${kind} error: ${message || 'unknown'}`,
   },
+  copilot_invalid_context: {
+    type: 'internal_server_error',
+    args: { contextId: 'string' },
+    message: ({ contextId }) => `Invalid copilot context ${contextId}.`,
+  },
+  copilot_failed_to_modify_context: {
+    type: 'internal_server_error',
+    args: { contextId: 'string', message: 'string' },
+    message: ({ contextId, message }) =>
+      `Failed to modify context ${contextId}: ${message}`,
+  },
 
   // Quota & Limit errors
   blob_quota_exceeded: {

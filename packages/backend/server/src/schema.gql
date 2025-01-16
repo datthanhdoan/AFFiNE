@@ -2,6 +2,14 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AddContextFileInput {
+  blobId: String!
+  content: Upload!
+  contextId: String!
+  fileName: String!
+  workspaceId: String!
+}
+
 type AlreadyInSpaceDataType {
   spaceId: String!
 }
@@ -25,6 +33,12 @@ type ChatMessage {
   role: String!
 }
 
+enum ContextFileStatus {
+  failed
+  finished
+  processing
+}
+
 type Copilot {
   """Get the session list of actions in the workspace"""
   actions: [String!]!
@@ -36,6 +50,14 @@ type Copilot {
   """Get the quota of the user in the workspace"""
   quota: CopilotQuota!
   workspaceId: ID
+}
+
+type CopilotContextFile {
+  blobId: String!
+  chunk_size: Int!
+  id: ID!
+  name: String!
+  status: ContextFileStatus!
 }
 
 type CopilotHistories {
@@ -149,6 +171,10 @@ input CreateCheckoutSessionInput {
   variant: SubscriptionVariant
 }
 
+input CreateContextInput {
+  workspaceId: String!
+}
+
 input CreateCopilotPromptInput {
   action: String
   config: CopilotPromptConfigInput
@@ -225,6 +251,8 @@ enum ErrorNames {
   COPILOT_ACTION_TAKEN
   COPILOT_FAILED_TO_CREATE_MESSAGE
   COPILOT_FAILED_TO_GENERATE_TEXT
+  COPILOT_FAILED_TO_MODIFY_CONTEXT
+  COPILOT_INVALID_CONTEXT
   COPILOT_MESSAGE_NOT_FOUND
   COPILOT_PROMPT_INVALID
   COPILOT_PROMPT_NOT_FOUND
@@ -472,6 +500,11 @@ type LimitedUserType {
   hasPassword: Boolean
 }
 
+input ListContextFileInput {
+  contextId: String!
+  workspaceId: String!
+}
+
 input ListUserInput {
   first: Int = 20
   skip: Int = 0
@@ -503,6 +536,9 @@ type MissingOauthQueryParameterDataType {
 type Mutation {
   acceptInviteById(inviteId: String!, sendAcceptMail: Boolean, workspaceId: String!): Boolean!
   activateLicense(license: String!, workspaceId: String!): License!
+
+  """add a file to context"""
+  addContextFile(options: AddContextFileInput!): String!
   addWorkspaceFeature(feature: FeatureType!, workspaceId: String!): Int!
   approveMember(userId: String!, workspaceId: String!): String!
   cancelSubscription(idempotencyKey: String @deprecated(reason: "use header `Idempotency-Key`"), plan: SubscriptionPlan = Pro, workspaceId: String): SubscriptionType!
@@ -517,6 +553,9 @@ type Mutation {
 
   """Create a subscription checkout link of stripe"""
   createCheckoutSession(input: CreateCheckoutSessionInput!): String!
+
+  """Create a context session"""
+  createCopilotContext(options: CreateContextInput!): String!
 
   """Create a chat message"""
   createCopilotMessage(options: CreateChatMessageInput!): String!
@@ -552,12 +591,18 @@ type Mutation {
   invite(email: String!, permission: Permission @deprecated(reason: "never used"), sendInviteMail: Boolean, workspaceId: String!): String!
   inviteBatch(emails: [String!]!, sendInviteMail: Boolean, workspaceId: String!): [InviteResult!]!
   leaveWorkspace(sendLeaveMail: Boolean, workspaceId: String!, workspaceName: String @deprecated(reason: "no longer used")): Boolean!
+
+  """list files in context"""
+  listContextFiles(options: ListContextFileInput!): [CopilotContextFile!]!
   publishPage(mode: PublicPageMode = Page, pageId: String!, workspaceId: String!): WorkspacePage!
   recoverDoc(guid: String!, timestamp: DateTime!, workspaceId: String!): DateTime!
   releaseDeletedBlobs(workspaceId: String!): Boolean!
 
   """Remove user avatar"""
   removeAvatar: RemoveAvatar!
+
+  """remove a file from context"""
+  removeContextFile(options: RemoveContextFileInput!): Boolean!
   removeWorkspaceFeature(feature: FeatureType!, workspaceId: String!): Int!
   resumeSubscription(idempotencyKey: String @deprecated(reason: "use header `Idempotency-Key`"), plan: SubscriptionPlan = Pro, workspaceId: String): SubscriptionType!
   revoke(userId: String!, workspaceId: String!): Boolean!
@@ -711,6 +756,12 @@ type QuotaQueryType {
 
 type RemoveAvatar {
   success: Boolean!
+}
+
+input RemoveContextFileInput {
+  contextId: String!
+  fileId: String!
+  workspaceId: String!
 }
 
 type RuntimeConfigNotFoundDataType {

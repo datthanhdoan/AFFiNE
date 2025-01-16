@@ -537,6 +537,27 @@ export class CopilotProviderSideError extends UserFriendlyError {
     super('internal_server_error', 'copilot_provider_side_error', message, args);
   }
 }
+@ObjectType()
+class CopilotInvalidContextDataType {
+  @Field() contextId!: string
+}
+
+export class CopilotInvalidContext extends UserFriendlyError {
+  constructor(args: CopilotInvalidContextDataType, message?: string | ((args: CopilotInvalidContextDataType) => string)) {
+    super('internal_server_error', 'copilot_invalid_context', message, args);
+  }
+}
+@ObjectType()
+class CopilotFailedToModifyContextDataType {
+  @Field() contextId!: string
+  @Field() message!: string
+}
+
+export class CopilotFailedToModifyContext extends UserFriendlyError {
+  constructor(args: CopilotFailedToModifyContextDataType, message?: string | ((args: CopilotFailedToModifyContextDataType) => string)) {
+    super('internal_server_error', 'copilot_failed_to_modify_context', message, args);
+  }
+}
 
 export class BlobQuotaExceeded extends UserFriendlyError {
   constructor(message?: string) {
@@ -722,6 +743,8 @@ export enum ErrorNames {
   COPILOT_PROMPT_NOT_FOUND,
   COPILOT_PROMPT_INVALID,
   COPILOT_PROVIDER_SIDE_ERROR,
+  COPILOT_INVALID_CONTEXT,
+  COPILOT_FAILED_TO_MODIFY_CONTEXT,
   BLOB_QUOTA_EXCEEDED,
   MEMBER_QUOTA_EXCEEDED,
   COPILOT_QUOTA_EXCEEDED,
@@ -746,5 +769,5 @@ registerEnumType(ErrorNames, {
 export const ErrorDataUnionType = createUnionType({
   name: 'ErrorDataUnion',
   types: () =>
-    [QueryTooLongDataType, WrongSignInCredentialsDataType, UnknownOauthProviderDataType, MissingOauthQueryParameterDataType, InvalidEmailDataType, InvalidPasswordLengthDataType, SpaceNotFoundDataType, MemberNotFoundInSpaceDataType, NotInSpaceDataType, AlreadyInSpaceDataType, SpaceAccessDeniedDataType, SpaceOwnerNotFoundDataType, DocNotFoundDataType, DocAccessDeniedDataType, VersionRejectedDataType, InvalidHistoryTimestampDataType, DocHistoryNotFoundDataType, BlobNotFoundDataType, UnsupportedSubscriptionPlanDataType, SubscriptionAlreadyExistsDataType, SubscriptionNotExistsDataType, SameSubscriptionRecurringDataType, SubscriptionPlanNotFoundDataType, CopilotMessageNotFoundDataType, CopilotPromptNotFoundDataType, CopilotProviderSideErrorDataType, RuntimeConfigNotFoundDataType, InvalidRuntimeConfigTypeDataType, InvalidLicenseUpdateParamsDataType, WorkspaceMembersExceedLimitToDowngradeDataType] as const,
+    [QueryTooLongDataType, WrongSignInCredentialsDataType, UnknownOauthProviderDataType, MissingOauthQueryParameterDataType, InvalidEmailDataType, InvalidPasswordLengthDataType, SpaceNotFoundDataType, MemberNotFoundInSpaceDataType, NotInSpaceDataType, AlreadyInSpaceDataType, SpaceAccessDeniedDataType, SpaceOwnerNotFoundDataType, DocNotFoundDataType, DocAccessDeniedDataType, VersionRejectedDataType, InvalidHistoryTimestampDataType, DocHistoryNotFoundDataType, BlobNotFoundDataType, UnsupportedSubscriptionPlanDataType, SubscriptionAlreadyExistsDataType, SubscriptionNotExistsDataType, SameSubscriptionRecurringDataType, SubscriptionPlanNotFoundDataType, CopilotMessageNotFoundDataType, CopilotPromptNotFoundDataType, CopilotProviderSideErrorDataType, CopilotInvalidContextDataType, CopilotFailedToModifyContextDataType, RuntimeConfigNotFoundDataType, InvalidRuntimeConfigTypeDataType, InvalidLicenseUpdateParamsDataType, WorkspaceMembersExceedLimitToDowngradeDataType] as const,
 });

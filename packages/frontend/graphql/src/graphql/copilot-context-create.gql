@@ -1,0 +1,3 @@
+mutation createCopilotContext($options: CreateContextInput!) {
+  createCopilotContext(options: $options)
+}

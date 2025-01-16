@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 
-import { Config } from '../../../base';
+import {
+  Config,
+  CopilotInvalidContext,
+  NoCopilotProviderAvailable,
+} from '../../../base';
 import { OpenAIEmbeddingClient } from './embedding';
 import { ContextSession } from './session';
 import { ContextConfig, ContextConfigSchema, EmbeddingClient } from './types';
@@ -45,7 +49,7 @@ export class CopilotContextService {
 
   async getOrCreate(workspaceId: string, id?: string): Promise<ContextSession> {
     if (!this.embeddingClient) {
-      throw new Error('copilot not configured yet');
+      throw new NoCopilotProviderAvailable('embedding client not configured');
     }
     if (id) {
       const context = this.sessionCache.get(id);
@@ -58,7 +62,7 @@ export class CopilotContextService {
         const config = ContextConfigSchema.safeParse(ret.config);
         if (config.success)
           return this.cacheSession(workspaceId, id, config.data);
-        throw new Error('Invalid context config');
+        throw new CopilotInvalidContext({ contextId: id });
       }
     }
 
