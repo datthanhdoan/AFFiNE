@@ -170,6 +170,12 @@ export const CloudWorkspaceMembersPanel = ({
     });
   }, [onChangeSettingState]);
 
+  const goToTeamBilling = useCallback(() => {
+    onChangeSettingState({
+      activeTab: 'workspace:billing',
+    });
+  }, [onChangeSettingState]);
+
   const desc = useMemo(() => {
     if (!workspaceQuota) return null;
 
@@ -253,7 +259,11 @@ export const CloudWorkspaceMembersPanel = ({
       </SettingRow>
 
       <div className={styles.membersPanel}>
-        <MemberList isOwner={!!isOwner} isAdmin={!!isAdmin} />
+        <MemberList
+          isOwner={!!isOwner}
+          isAdmin={!!isAdmin}
+          goToTeamBilling={goToTeamBilling}
+        />
       </div>
     </>
   );

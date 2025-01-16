@@ -1,4 +1,7 @@
-import { AcceptInvitePage } from '@affine/component/member-components';
+import {
+  AcceptInvitePage,
+  JoinFailedPage,
+} from '@affine/component/member-components';
 import type { GetInviteInfoQuery } from '@affine/graphql';
 import {
   acceptInviteByInviteIdMutation,
@@ -23,15 +26,44 @@ import { AppContainer } from '../../components/app-container';
  * only for web
  */
 const AcceptInvite = ({
+  inviteId,
   inviteInfo,
 }: {
+  inviteId: string;
   inviteInfo: GetInviteInfoQuery['getInviteInfo'];
 }) => {
   const { jumpToPage } = useNavigateHelper();
+  const graphqlService = useService(GraphQLService);
+  const navigateHelper = useNavigateHelper();
+  const [error, setError] = useState<UserFriendlyError | null>(null);
 
   const openWorkspace = useCallback(() => {
     jumpToPage(inviteInfo.workspace.id, 'all', RouteLogic.REPLACE);
   }, [inviteInfo.workspace.id, jumpToPage]);
+
+  useEffect(() => {
+    (async () => {
+      await graphqlService.gql({
+        query: acceptInviteByInviteIdMutation,
+        variables: {
+          workspaceId: inviteInfo.workspace.id,
+          inviteId,
+          sendAcceptMail: true,
+        },
+      });
+    })().catch(error => {
+      const userFriendlyError = UserFriendlyError.fromAnyError(error);
+      console.error(userFriendlyError);
+      if (userFriendlyError.name === ErrorNames.ALREADY_IN_SPACE) {
+        return navigateHelper.jumpToIndex();
+      }
+      setError(userFriendlyError);
+    });
+  }, [graphqlService, inviteId, inviteInfo, navigateHelper]);
+
+  if (error) {
+    return <JoinFailedPage inviteInfo={inviteInfo} />;
+  }
 
   return (
     <AcceptInvitePage inviteInfo={inviteInfo} onOpenWorkspace={openWorkspace} />
@@ -85,21 +117,6 @@ export const Middle = () => {
         },
       });
 
-      // If the inviteId is invalid, redirect to 404 page
-      if (!res || !res?.getInviteInfo) {
-        return navigateHelper.jumpTo404();
-      }
-
-      // No mater sign in or not, we need to accept the invite
-      await graphqlService.gql({
-        query: acceptInviteByInviteIdMutation,
-        variables: {
-          workspaceId: res.getInviteInfo.workspace.id,
-          inviteId,
-          sendAcceptMail: true,
-        },
-      });
-
       setData({
         inviteId,
         inviteInfo: res.getInviteInfo,
@@ -108,16 +125,9 @@ export const Middle = () => {
     })().catch(error => {
       const userFriendlyError = UserFriendlyError.fromAnyError(error);
       console.error(userFriendlyError);
-      if (userFriendlyError.name === ErrorNames.ALREADY_IN_SPACE) {
-        return navigateHelper.jumpToIndex();
-      }
-      if (
-        userFriendlyError.name === ErrorNames.USER_NOT_FOUND ||
-        userFriendlyError.name === ErrorNames.SPACE_OWNER_NOT_FOUND
-      ) {
-        return navigateHelper.jumpToExpired();
-      }
-      return navigateHelper.jumpTo404();
+
+      // If the inviteId is invalid, redirect to expired page
+      return navigateHelper.jumpToExpired();
     });
   }, [graphqlService, navigateHelper, params.inviteId]);
 
@@ -125,5 +135,5 @@ export const Middle = () => {
     return <AppContainer fallback />;
   }
 
-  return <AcceptInvite inviteInfo={data.inviteInfo} />;
+  return <AcceptInvite inviteId={data.inviteId} inviteInfo={data.inviteInfo} />;
 };
