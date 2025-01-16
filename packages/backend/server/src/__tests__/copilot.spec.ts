@@ -10,6 +10,7 @@ import { AuthService } from '../core/auth';
 import { QuotaModule } from '../core/quota';
 import { CopilotModule } from '../plugins/copilot';
 import { CopilotContextService } from '../plugins/copilot/context';
+import { MockEmbeddingClient } from '../plugins/copilot/context/embedding';
 import { prompts, PromptService } from '../plugins/copilot/prompt';
 import {
   CopilotProviderService,
@@ -1256,21 +1257,32 @@ test('CitationParser should not replace chunks of citation already with URLs', t
 test('should be able to manage context', async t => {
   const { context } = t.context;
 
+  // use mocked embedding client
+  Sinon.stub(context, 'embeddingClient').get(() => new MockEmbeddingClient());
+
   const session = await context.getOrCreate('test');
   t.is(session.workspaceId, 'test', 'should get workspace id');
 
   const fs = await import('node:fs');
-  const buffer = fs.readFileSync('/Users/ds/Downloads/算法.pdf');
-  const file = new File([buffer], '算法.pdf', { type: 'application/pdf' });
+  const buffer = fs.readFileSync(
+    new URL('../../../../common/native/fixtures/sample.pdf', import.meta.url)
+  );
+  const file = new File([buffer], 'sample.pdf', { type: 'application/pdf' });
 
   const fileId = await session.add(file);
   const list = await session.list();
+  t.deepEqual(
+    list.map(f => f.chunk_size),
+    [3],
+    'should split file correctly'
+  );
   t.deepEqual(
     list.map(f => f.id),
     [fileId],
     'should list file id'
   );
 
-  const result = await session.match('有向无环图', 5);
-  console.log(result);
+  const result = await session.match('test', 2);
+  t.is(result.length, 2, 'should match context');
+  t.is(result[0].fileId, fileId!, 'should match file id');
 });

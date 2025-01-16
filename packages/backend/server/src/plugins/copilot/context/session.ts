@@ -1,96 +1,21 @@
 import type { File } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { nanoid } from 'nanoid';
-import OpenAI from 'openai';
-import { z } from 'zod';
 
-import { Config, PrismaTransaction } from '../../base';
-import { parseDoc } from '../../native';
-
-const ContextConfigSchema = z.object({
-  files: z
-    .object({
-      id: z.string(),
-      chunk_size: z.number(),
-      name: z.string(),
-    })
-    .array(),
-});
-
-type ContextConfig = z.infer<typeof ContextConfigSchema>;
-
-type FileChunkSimilarity = {
-  fileId: string;
-  chunk: number;
-  content: string;
-  distance: number | null;
-};
-
-@Injectable()
-export class CopilotContextService {
-  private readonly sessionCache = new Map<string, ContextSession>();
-  private readonly client: OpenAI | undefined;
-
-  constructor(
-    config: Config,
-    private readonly db: PrismaClient
-  ) {
-    const configure = config.plugins.copilot.openai;
-    if (configure) {
-      this.client = new OpenAI(configure);
-    }
-  }
-
-  private cacheSession(
-    client: OpenAI,
-    workspaceId: string,
-    id: string,
-    config: ContextConfig
-  ): ContextSession {
-    const context = new ContextSession(
-      client,
-      workspaceId,
-      id,
-      config,
-      this.db
-    );
-    this.sessionCache.set(context.id, context);
-    return context;
-  }
-
-  async getOrCreate(workspaceId: string, id?: string): Promise<ContextSession> {
-    if (!this.client) {
-      throw new Error('copilot key not configured yet');
-    }
-    if (id) {
-      const context = this.sessionCache.get(id);
-      if (context) return context;
-      const ret = await this.db.aiContext.findUnique({
-        where: { workspaceId, id },
-        select: { config: true },
-      });
-      if (ret) {
-        const config = ContextConfigSchema.safeParse(ret.config);
-        if (config.success)
-          return this.cacheSession(this.client, workspaceId, id, config.data);
-        throw new Error('Invalid context config');
-      }
-    }
-
-    const context = await this.db.aiContext.create({
-      data: { workspaceId, config: { files: [] } },
-    });
-    const config = ContextConfigSchema.parse(context.config);
-    return this.cacheSession(this.client, workspaceId, context.id, config);
-  }
-}
+import { PrismaTransaction } from '../../../base';
+import { parseDoc } from '../../../native';
+import {
+  ContextConfig,
+  Embedding,
+  EmbeddingClient,
+  FileChunkSimilarity,
+} from './types';
 
 export class ContextSession implements AsyncDisposable {
   constructor(
-    private readonly client: OpenAI,
+    private readonly client: EmbeddingClient,
     private readonly wsId: string,
     private readonly contextId: string,
     private readonly config: ContextConfig,
@@ -105,10 +30,6 @@ export class ContextSession implements AsyncDisposable {
     return this.contextId;
   }
 
-  private get embeddings() {
-    return this.client.embeddings;
-  }
-
   async list() {
     return this.config.files.map(f => ({ ...f }));
   }
@@ -116,7 +37,7 @@ export class ContextSession implements AsyncDisposable {
   private processEmbeddings(
     fileId: string,
     input: string[],
-    embeddings: OpenAI.Embeddings.Embedding[]
+    embeddings: Embedding[]
   ) {
     const groups = embeddings.map(e => [
       randomUUID(),
@@ -133,7 +54,7 @@ export class ContextSession implements AsyncDisposable {
   private async insertEmbeddings(
     name: string,
     input: string[],
-    embeddings: OpenAI.Embeddings.Embedding[]
+    embeddings: Embedding[]
   ) {
     const fileId = nanoid();
     const values = this.processEmbeddings(fileId, input, embeddings);
@@ -158,16 +79,8 @@ export class ContextSession implements AsyncDisposable {
       const input = doc.chunks
         .toSorted((a, b) => a.index - b.index)
         .map(chunk => chunk.content);
-      const embeddings = await this.embeddings.create(
-        {
-          input,
-          model: 'text-embedding-3-small',
-          dimensions: 512,
-          encoding_format: 'float',
-        },
-        { signal }
-      );
-      return await this.insertEmbeddings(content.name, input, embeddings.data);
+      const embeddings = await this.client.getEmbeddings(input, signal);
+      return await this.insertEmbeddings(content.name, input, embeddings);
     }
     return undefined;
   }
@@ -187,17 +100,9 @@ export class ContextSession implements AsyncDisposable {
     topK: number,
     signal?: AbortSignal
   ): Promise<FileChunkSimilarity[]> {
-    const embedding = await this.embeddings
-      .create(
-        {
-          input: content,
-          model: 'text-embedding-3-small',
-          dimensions: 512,
-          encoding_format: 'float',
-        },
-        { signal }
-      )
-      .then(r => r.data?.[0]?.embedding);
+    const embedding = await this.client
+      .getEmbeddings([content], signal)
+      .then(r => r?.[0]?.embedding);
     if (!embedding) return [];
     return await this.db.$queryRaw<Array<FileChunkSimilarity>>`
       SELECT "file_id" as "fileId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 

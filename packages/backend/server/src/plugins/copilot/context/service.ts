@@ -1,0 +1,71 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+import OpenAI from 'openai';
+
+import { Config } from '../../../base';
+import { OpenAIEmbeddingClient } from './embedding';
+import { ContextSession } from './session';
+import { ContextConfig, ContextConfigSchema, EmbeddingClient } from './types';
+
+@Injectable()
+export class CopilotContextService {
+  private readonly sessionCache = new Map<string, ContextSession>();
+  private readonly client: EmbeddingClient | undefined;
+
+  constructor(
+    config: Config,
+    private readonly db: PrismaClient
+  ) {
+    const configure = config.plugins.copilot.openai;
+    if (configure) {
+      this.client = new OpenAIEmbeddingClient(new OpenAI(configure));
+    }
+  }
+
+  // public this client to allow overriding in tests
+  get embeddingClient() {
+    return this.client as EmbeddingClient;
+  }
+
+  private cacheSession(
+    workspaceId: string,
+    id: string,
+    config: ContextConfig
+  ): ContextSession {
+    const context = new ContextSession(
+      this.embeddingClient,
+      workspaceId,
+      id,
+      config,
+      this.db
+    );
+    this.sessionCache.set(context.id, context);
+    return context;
+  }
+
+  async getOrCreate(workspaceId: string, id?: string): Promise<ContextSession> {
+    if (!this.embeddingClient) {
+      throw new Error('copilot not configured yet');
+    }
+    if (id) {
+      const context = this.sessionCache.get(id);
+      if (context) return context;
+      const ret = await this.db.aiContext.findUnique({
+        where: { workspaceId, id },
+        select: { config: true },
+      });
+      if (ret) {
+        const config = ContextConfigSchema.safeParse(ret.config);
+        if (config.success)
+          return this.cacheSession(workspaceId, id, config.data);
+        throw new Error('Invalid context config');
+      }
+    }
+
+    const context = await this.db.aiContext.create({
+      data: { workspaceId, config: { files: [] } },
+    });
+    const config = ContextConfigSchema.parse(context.config);
+    return this.cacheSession(workspaceId, context.id, config);
+  }
+}
