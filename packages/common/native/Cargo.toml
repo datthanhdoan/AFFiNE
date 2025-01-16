@@ -4,7 +4,7 @@ name    = "affine_common"
 version = "0.1.0"
 
 [features]
-default    = ["doc-loader"]
+default    = []
 doc-loader = ["async-trait", "docx-parser", "futures", "futures-util", "infer", "langchain-rust", "path-ext", "pdf-extract"]
 
 [dependencies]

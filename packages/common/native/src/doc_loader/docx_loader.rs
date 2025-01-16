@@ -55,11 +55,16 @@ mod tests {
   use super::*;
   use futures_util::StreamExt;
   use langchain_rust::text_splitter::TokenSplitter;
+  use std::{fs::read, path::PathBuf};
+
+  fn get_fixtures_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures")
+  }
 
   #[tokio::test]
   async fn test_parse_docx() {
     let docx_buffer = include_bytes!("../../fixtures/demo.docx");
-    let parsed_buffer = include_str!("../../fixtures/demo.docx.0.md");
+    let parsed_buffer = include_str!("../../fixtures/demo.docx.md");
 
     let loader = DocxLoader::new(Cursor::new(docx_buffer)).unwrap();
 
@@ -74,8 +79,15 @@ mod tests {
       .await
       .unwrap();
 
+    let mut idx = 0;
     while let Some(doc) = documents.next().await {
-      assert_eq!(doc.unwrap().page_content, parsed_buffer);
+      assert_eq!(
+        doc.unwrap().page_content,
+        String::from_utf8_lossy(
+          &read(get_fixtures_path().join(format!("demo.docx.{}.md", idx))).unwrap()
+        )
+      );
+      idx += 1;
     }
   }
 }

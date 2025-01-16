@@ -265,7 +265,6 @@ mutation {
 export async function matchContext(
   app: INestApplication,
   userToken: string,
-  sessionId: string,
   contextId: string,
   content: string,
   limit: number

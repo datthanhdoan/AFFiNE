@@ -795,14 +795,7 @@ test('should be able to manage context', async t => {
     t.is(file.name, 'sample.pdf', 'should list file name');
     t.is(file.chunk_size, 3, 'should split file into chunks');
 
-    const result = (await matchContext(
-      app,
-      token,
-      sessionId,
-      contextId,
-      'test',
-      2
-    ))!;
+    const result = (await matchContext(app, token, contextId, 'test', 2))!;
     t.is(result.length, 2, 'should match context');
     t.is(result[0].fileId, fileId, 'should match file id');
   }
