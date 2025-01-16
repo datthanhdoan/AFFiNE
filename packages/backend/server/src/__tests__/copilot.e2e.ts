@@ -737,7 +737,7 @@ test('should be able to search image from unsplash', async t => {
   t.not(resp.status, 404, 'route should be exists');
 });
 
-test.only('should be able to manage context', async t => {
+test('should be able to manage context', async t => {
   const { app, context } = t.context;
 
   const { id: workspaceId } = await createWorkspace(app, token);
