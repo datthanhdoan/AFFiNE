@@ -1,9 +1,9 @@
-mutation listContextFiles($options: ListContextFileInput!) {
-  listContextFiles(options: $options) {
-    id
-    name
-    chunk_size
-    status
-    blobId
+query listContext($workspaceId: String!, $sessionId: String!) {
+  currentUser {
+    copilot(workspaceId: $workspaceId) {
+      contexts(sessionId: $sessionId) {
+        id
+      }
+    }
   }
 }

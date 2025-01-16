@@ -238,6 +238,149 @@ export async function forkCopilotSession(
   return res.body.data.forkCopilotSession;
 }
 
+export async function createCopilotContext(
+  app: INestApplication,
+  userToken: string,
+  workspaceId: string,
+  sessionId: string
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+mutation {
+  createCopilotContext(workspaceId: ${workspaceId}, sessionId: ${sessionId})
+}
+      `,
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.createCopilotContext;
+}
+
+export async function listContext(
+  app: INestApplication,
+  userToken: string,
+  workspaceId: string,
+  sessionId: string
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+query {
+  currentUser {
+    copilot(workspaceId: ${workspaceId}) {
+      contexts(sessionId: ${sessionId}) {
+        id
+      }
+    }
+  }
+}
+      `,
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.createCopilotContext;
+}
+
+export async function addContextFile(
+  app: INestApplication,
+  userToken: string,
+  contextId: string,
+  blobId: string,
+  fileName: string,
+  content: ArrayBuffer
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+        mutation addContextFile($options: AddContextFileInput!) {
+          addContextFile(options: $options)
+        }
+      `,
+      variables: { options: { contextId, blobId, fileName, content } },
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.addContextFile;
+}
+
+export async function removeContextFile(
+  app: INestApplication,
+  userToken: string,
+  contextId: string,
+  fileId: string
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+        mutation removeContextFile($options: RemoveContextFileInput!) {
+          removeContextFile(options: $options)
+        }
+      `,
+      variables: { options: { contextId, fileId } },
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.removeContextFile;
+}
+
+export async function listContextFiles(
+  app: INestApplication,
+  userToken: string,
+  workspaceId: string,
+  sessionId: string,
+  contextId: string
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+        query {
+          currentUser {
+            copilot(workspaceId: ${workspaceId}) {
+              contexts(sessionId: ${sessionId}) {
+                files(contextId: ${contextId}) {
+                  id
+                  name
+                  blobId
+                  chunk_size
+                  status
+                }
+              }
+            }
+          }
+        }
+      `,
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.listContextFiles;
+}
+
 export async function createCopilotMessage(
   app: INestApplication,
   userToken: string,

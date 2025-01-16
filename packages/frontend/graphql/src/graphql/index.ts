@@ -144,6 +144,17 @@ mutation changePassword($token: String!, $userId: String!, $newPassword: String!
 }`,
 };
 
+export const createCopilotContextMutation = {
+  id: 'createCopilotContextMutation' as const,
+  operationName: 'createCopilotContext',
+  definitionName: 'createCopilotContext',
+  containsFile: false,
+  query: `
+mutation createCopilotContext($workspaceId: String!, $sessionId: String!) {
+  createCopilotContext(workspaceId: $workspaceId, sessionId: $sessionId)
+}`,
+};
+
 export const addContextFileMutation = {
   id: 'addContextFileMutation' as const,
   operationName: 'addContextFile',
@@ -155,30 +166,25 @@ mutation addContextFile($options: AddContextFileInput!) {
 }`,
 };
 
-export const createCopilotContextMutation = {
-  id: 'createCopilotContextMutation' as const,
-  operationName: 'createCopilotContext',
-  definitionName: 'createCopilotContext',
-  containsFile: false,
-  query: `
-mutation createCopilotContext($options: CreateContextInput!) {
-  createCopilotContext(options: $options)
-}`,
-};
-
-export const listContextFilesMutation = {
-  id: 'listContextFilesMutation' as const,
+export const listContextFilesQuery = {
+  id: 'listContextFilesQuery' as const,
   operationName: 'listContextFiles',
-  definitionName: 'listContextFiles',
+  definitionName: 'currentUser',
   containsFile: false,
   query: `
-mutation listContextFiles($options: ListContextFileInput!) {
-  listContextFiles(options: $options) {
-    id
-    name
-    chunk_size
-    status
-    blobId
+query listContextFiles($workspaceId: String!, $sessionId: String!, $contextId: String!) {
+  currentUser {
+    copilot(workspaceId: $workspaceId) {
+      contexts(sessionId: $sessionId) {
+        files(contextId: $contextId) {
+          id
+          name
+          blobId
+          chunk_size
+          status
+        }
+      }
+    }
   }
 }`,
 };
@@ -191,6 +197,23 @@ export const removeContextFileMutation = {
   query: `
 mutation removeContextFile($options: RemoveContextFileInput!) {
   removeContextFile(options: $options)
+}`,
+};
+
+export const listContextQuery = {
+  id: 'listContextQuery' as const,
+  operationName: 'listContext',
+  definitionName: 'currentUser',
+  containsFile: false,
+  query: `
+query listContext($workspaceId: String!, $sessionId: String!) {
+  currentUser {
+    copilot(workspaceId: $workspaceId) {
+      contexts(sessionId: $sessionId) {
+        id
+      }
+    }
+  }
 }`,
 };
 

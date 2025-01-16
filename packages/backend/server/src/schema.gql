@@ -7,7 +7,6 @@ input AddContextFileInput {
   content: Upload!
   contextId: String!
   fileName: String!
-  workspaceId: String!
 }
 
 type AlreadyInSpaceDataType {
@@ -45,11 +44,20 @@ type Copilot {
 
   """Get the session list of chats in the workspace"""
   chats: [String!]!
+
+  """Get the context list of a session"""
+  contexts(sessionId: String!): [CopilotContext!]!
   histories(docId: String, options: QueryChatHistoriesInput): [CopilotHistories!]!
 
   """Get the quota of the user in the workspace"""
   quota: CopilotQuota!
   workspaceId: ID
+}
+
+type CopilotContext {
+  """list files in context"""
+  files(contextId: String): [CopilotContextFile!]!
+  id: ID!
 }
 
 type CopilotContextFile {
@@ -169,10 +177,6 @@ input CreateCheckoutSessionInput {
   recurring: SubscriptionRecurring = Yearly
   successCallbackLink: String!
   variant: SubscriptionVariant
-}
-
-input CreateContextInput {
-  workspaceId: String!
 }
 
 input CreateCopilotPromptInput {
@@ -500,11 +504,6 @@ type LimitedUserType {
   hasPassword: Boolean
 }
 
-input ListContextFileInput {
-  contextId: String!
-  workspaceId: String!
-}
-
 input ListUserInput {
   first: Int = 20
   skip: Int = 0
@@ -555,7 +554,7 @@ type Mutation {
   createCheckoutSession(input: CreateCheckoutSessionInput!): String!
 
   """Create a context session"""
-  createCopilotContext(options: CreateContextInput!): String!
+  createCopilotContext(sessionId: String!, workspaceId: String!): String!
 
   """Create a chat message"""
   createCopilotMessage(options: CreateChatMessageInput!): String!
@@ -591,9 +590,6 @@ type Mutation {
   invite(email: String!, permission: Permission @deprecated(reason: "never used"), sendInviteMail: Boolean, workspaceId: String!): String!
   inviteBatch(emails: [String!]!, sendInviteMail: Boolean, workspaceId: String!): [InviteResult!]!
   leaveWorkspace(sendLeaveMail: Boolean, workspaceId: String!, workspaceName: String @deprecated(reason: "no longer used")): Boolean!
-
-  """list files in context"""
-  listContextFiles(options: ListContextFileInput!): [CopilotContextFile!]!
   publishPage(mode: PublicPageMode = Page, pageId: String!, workspaceId: String!): WorkspacePage!
   recoverDoc(guid: String!, timestamp: DateTime!, workspaceId: String!): DateTime!
   releaseDeletedBlobs(workspaceId: String!): Boolean!
@@ -761,7 +757,6 @@ type RemoveAvatar {
 input RemoveContextFileInput {
   contextId: String!
   fileId: String!
-  workspaceId: String!
 }
 
 type RuntimeConfigNotFoundDataType {

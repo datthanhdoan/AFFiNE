@@ -32,44 +32,50 @@ export class CopilotContextService {
   }
 
   private cacheSession(
-    workspaceId: string,
-    id: string,
+    contextId: string,
     config: ContextConfig
   ): ContextSession {
     const context = new ContextSession(
       this.embeddingClient,
-      workspaceId,
-      id,
+      contextId,
       config,
       this.db
     );
-    this.sessionCache.set(context.id, context);
+    this.sessionCache.set(contextId, context);
     return context;
   }
 
-  async getOrCreate(workspaceId: string, id?: string): Promise<ContextSession> {
+  async create(sessionId: string): Promise<ContextSession> {
+    const context = await this.db.aiContext.create({
+      data: { sessionId, config: { files: [] } },
+    });
+    const config = ContextConfigSchema.parse(context.config);
+    return this.cacheSession(sessionId, config);
+  }
+
+  async get(id: string): Promise<ContextSession> {
     if (!this.embeddingClient) {
       throw new NoCopilotProviderAvailable('embedding client not configured');
     }
-    if (id) {
-      const context = this.sessionCache.get(id);
-      if (context) return context;
-      const ret = await this.db.aiContext.findUnique({
-        where: { workspaceId, id },
-        select: { config: true },
-      });
-      if (ret) {
-        const config = ContextConfigSchema.safeParse(ret.config);
-        if (config.success)
-          return this.cacheSession(workspaceId, id, config.data);
-        throw new CopilotInvalidContext({ contextId: id });
-      }
-    }
 
-    const context = await this.db.aiContext.create({
-      data: { workspaceId, config: { files: [] } },
+    const context = this.sessionCache.get(id);
+    if (context) return context;
+    const ret = await this.db.aiContext.findUnique({
+      where: { id },
+      select: { config: true },
     });
-    const config = ContextConfigSchema.parse(context.config);
-    return this.cacheSession(workspaceId, context.id, config);
+    if (ret) {
+      const config = ContextConfigSchema.safeParse(ret.config);
+      if (config.success) return this.cacheSession(id, config.data);
+    }
+    throw new CopilotInvalidContext({ contextId: id });
+  }
+
+  async list(sessionId: string): Promise<{ id: string }[]> {
+    const contexts = await this.db.aiContext.findMany({
+      where: { sessionId },
+      select: { id: true },
+    });
+    return contexts;
   }
 }

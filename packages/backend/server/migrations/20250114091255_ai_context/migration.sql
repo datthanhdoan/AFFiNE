@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "vector";
 -- CreateTable
 CREATE TABLE "ai_contexts" (
     "id" VARCHAR NOT NULL,
-    "workspace_id" VARCHAR NOT NULL,
+    "session_id" VARCHAR NOT NULL,
     "config" JSON NOT NULL,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,
@@ -36,6 +36,10 @@ CREATE TABLE "ai_workspace_embeddings" (
 
     CONSTRAINT "ai_workspace_embeddings_pkey" PRIMARY KEY ("workspace_id","doc_id")
 );
+
+
+-- AddForeignKey
+ALTER TABLE "ai_contexts" ADD CONSTRAINT "ai_contexts_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "ai_sessions_metadata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ai_context_embeddings" ADD CONSTRAINT "ai_context_embeddings_context_id_fkey" FOREIGN KEY ("context_id") REFERENCES "ai_contexts"("id") ON DELETE CASCADE ON UPDATE CASCADE;

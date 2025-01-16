@@ -5,7 +5,11 @@ import { FeatureModule } from '../../core/features';
 import { PermissionModule } from '../../core/permission';
 import { QuotaModule } from '../../core/quota';
 import { Plugin } from '../registry';
-import { CopilotContextService } from './context';
+import {
+  CopilotContextResolver,
+  CopilotContextRootResolver,
+  CopilotContextService,
+} from './context';
 import { CopilotController } from './controller';
 import { ChatMessageCache } from './message';
 import { PromptService } from './prompt';
@@ -42,8 +46,12 @@ registerCopilotProvider(PerplexityProvider);
     CopilotProviderService,
     CopilotStorage,
     PromptsManagementResolver,
+    // workflow
     CopilotWorkflowService,
     ...CopilotWorkflowExecutors,
+    // context
+    CopilotContextRootResolver,
+    CopilotContextResolver,
     CopilotContextService,
   ],
   controllers: [CopilotController],

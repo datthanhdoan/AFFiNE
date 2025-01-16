@@ -20,15 +20,10 @@ import {
 export class ContextSession implements AsyncDisposable {
   constructor(
     private readonly client: EmbeddingClient,
-    private readonly wsId: string,
     private readonly contextId: string,
     private readonly config: ContextConfig,
     private readonly db: PrismaClient
   ) {}
-
-  get workspaceId() {
-    return this.wsId;
-  }
 
   get id() {
     return this.contextId;
@@ -193,7 +188,7 @@ export class ContextSession implements AsyncDisposable {
   async save(tx?: PrismaTransaction) {
     const executor = tx || this.db;
     await executor.aiContext.update({
-      where: { workspaceId: this.wsId, id: this.contextId },
+      where: { id: this.contextId },
       data: { config: this.config },
     });
   }

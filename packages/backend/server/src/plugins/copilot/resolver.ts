@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { BadRequestException, NotFoundException, Req } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   Args,
   Field,
@@ -16,14 +16,12 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { AiPromptRole } from '@prisma/client';
-import type { Request } from 'express';
 import { GraphQLJSON, SafeIntResolver } from 'graphql-scalars';
 import GraphQLUpload from 'graphql-upload/GraphQLUpload.mjs';
 
 import {
   CallMetric,
   CopilotFailedToCreateMessage,
-  CopilotFailedToModifyContext,
   CopilotSessionNotFound,
   type FileUpload,
   RequestMutex,
@@ -34,11 +32,6 @@ import { CurrentUser } from '../../core/auth';
 import { Admin } from '../../core/common';
 import { PermissionService } from '../../core/permission';
 import { UserType } from '../../core/user';
-import {
-  type ContextFile,
-  ContextFileStatus,
-  CopilotContextService,
-} from './context';
 import { PromptService } from './prompt';
 import { ChatSessionService } from './session';
 import { CopilotStorage } from './storage';
@@ -127,71 +120,6 @@ class CreateChatMessageInput implements Omit<SubmittedMessage, 'content'> {
 
   @Field(() => GraphQLJSON, { nullable: true })
   params!: Record<string, any> | undefined;
-}
-
-@InputType()
-class CreateContextInput {
-  @Field(() => String)
-  workspaceId!: string;
-}
-
-@InputType()
-class AddContextFileInput {
-  @Field(() => String)
-  workspaceId!: string;
-
-  @Field(() => String)
-  contextId!: string;
-
-  @Field(() => String)
-  fileName!: string;
-
-  @Field(() => String)
-  blobId!: string;
-
-  @Field(() => GraphQLUpload)
-  content!: Promise<FileUpload>;
-}
-
-@InputType()
-class RemoveContextFileInput {
-  @Field(() => String)
-  workspaceId!: string;
-
-  @Field(() => String)
-  contextId!: string;
-
-  @Field(() => String)
-  fileId!: string;
-}
-
-@InputType()
-class ListContextFileInput {
-  @Field(() => String)
-  workspaceId!: string;
-
-  @Field(() => String)
-  contextId!: string;
-}
-
-registerEnumType(ContextFileStatus, { name: 'ContextFileStatus' });
-
-@ObjectType()
-class CopilotContextFile implements ContextFile {
-  @Field(() => ID)
-  id!: string;
-
-  @Field(() => String)
-  name!: string;
-
-  @Field(() => Number)
-  chunk_size!: number;
-
-  @Field(() => ContextFileStatus)
-  status!: ContextFileStatus;
-
-  @Field(() => String)
-  blobId!: string;
 }
 
 enum ChatHistoryOrder {
@@ -352,15 +280,8 @@ export class CopilotResolver {
     private readonly permissions: PermissionService,
     private readonly mutex: RequestMutex,
     private readonly chatSession: ChatSessionService,
-    private readonly context: CopilotContextService,
     private readonly storage: CopilotStorage
   ) {}
-
-  private getSignal(req: Request) {
-    const controller = new AbortController();
-    req.on('close', () => controller.abort());
-    return controller.signal;
-  }
 
   @ResolveField(() => CopilotQuotaType, {
     name: 'quota',
@@ -598,108 +519,6 @@ export class CopilotResolver {
     } catch (e: any) {
       throw new CopilotFailedToCreateMessage(e.message);
     }
-  }
-
-  @Mutation(() => String, {
-    description: 'Create a context session',
-  })
-  @CallMetric('ai', 'context_create')
-  async createCopilotContext(
-    @Args({ name: 'options', type: () => CreateContextInput })
-    options: CreateContextInput
-  ) {
-    const lockFlag = `${COPILOT_LOCKER}:context:${options.workspaceId}`;
-    await using lock = await this.mutex.acquire(lockFlag);
-    if (!lock) {
-      return new TooManyRequest('Server is busy');
-    }
-    const session = await this.context.getOrCreate(options.workspaceId);
-    return session.id;
-  }
-
-  @Mutation(() => String, {
-    description: 'add a file to context',
-  })
-  @CallMetric('ai', 'context_file_add')
-  async addContextFile(
-    @Req() req: Request,
-    @Args({ name: 'options', type: () => AddContextFileInput })
-    options: AddContextFileInput
-  ) {
-    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
-    await using lock = await this.mutex.acquire(lockFlag);
-    if (!lock) {
-      return new TooManyRequest('Server is busy');
-    }
-    const session = await this.context.getOrCreate(
-      options.workspaceId,
-      options.contextId
-    );
-
-    try {
-      const content = await options.content;
-      const signal = this.getSignal(req);
-      return await session.addStream(
-        content.createReadStream(),
-        content.filename,
-        options.blobId,
-        signal
-      );
-    } catch (e: any) {
-      throw new CopilotFailedToModifyContext({
-        contextId: options.contextId,
-        message: e.message,
-      });
-    }
-  }
-
-  @Mutation(() => Boolean, {
-    description: 'remove a file from context',
-  })
-  @CallMetric('ai', 'context_file_remove')
-  async removeContextFile(
-    @Args({ name: 'options', type: () => RemoveContextFileInput })
-    options: RemoveContextFileInput
-  ) {
-    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
-    await using lock = await this.mutex.acquire(lockFlag);
-    if (!lock) {
-      return new TooManyRequest('Server is busy');
-    }
-    const session = await this.context.getOrCreate(
-      options.workspaceId,
-      options.contextId
-    );
-
-    try {
-      return await session.remove(options.fileId);
-    } catch (e: any) {
-      throw new CopilotFailedToModifyContext({
-        contextId: options.contextId,
-        message: e.message,
-      });
-    }
-  }
-
-  @Mutation(() => [CopilotContextFile], {
-    description: 'list files in context',
-  })
-  @CallMetric('ai', 'context_file_list')
-  async listContextFiles(
-    @Args({ name: 'options', type: () => ListContextFileInput })
-    options: ListContextFileInput
-  ): Promise<CopilotContextFile[] | TooManyRequest> {
-    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
-    await using lock = await this.mutex.acquire(lockFlag);
-    if (!lock) {
-      return new TooManyRequest('Server is busy');
-    }
-    const session = await this.context.getOrCreate(
-      options.workspaceId,
-      options.contextId
-    );
-
-    return await session.list();
   }
 }
 

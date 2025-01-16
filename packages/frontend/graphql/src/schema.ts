@@ -42,7 +42,6 @@ export interface AddContextFileInput {
   content: Scalars['Upload']['input'];
   contextId: Scalars['String']['input'];
   fileName: Scalars['String']['input'];
-  workspaceId: Scalars['String']['input'];
 }
 
 export interface AlreadyInSpaceDataType {
@@ -83,15 +82,32 @@ export interface Copilot {
   actions: Array<Scalars['String']['output']>;
   /** Get the session list of chats in the workspace */
   chats: Array<Scalars['String']['output']>;
+  /** Get the context list of a session */
+  contexts: Array<CopilotContext>;
   histories: Array<CopilotHistories>;
   /** Get the quota of the user in the workspace */
   quota: CopilotQuota;
   workspaceId: Maybe<Scalars['ID']['output']>;
 }
 
+export interface CopilotContextsArgs {
+  sessionId: Scalars['String']['input'];
+}
+
 export interface CopilotHistoriesArgs {
   docId?: InputMaybe<Scalars['String']['input']>;
   options?: InputMaybe<QueryChatHistoriesInput>;
+}
+
+export interface CopilotContext {
+  __typename?: 'CopilotContext';
+  /** list files in context */
+  files: Array<CopilotContextFile>;
+  id: Scalars['ID']['output'];
+}
+
+export interface CopilotContextFilesArgs {
+  contextId?: InputMaybe<Scalars['String']['input']>;
 }
 
 export interface CopilotContextFile {
@@ -229,10 +245,6 @@ export interface CreateCheckoutSessionInput {
   recurring?: InputMaybe<SubscriptionRecurring>;
   successCallbackLink: Scalars['String']['input'];
   variant?: InputMaybe<SubscriptionVariant>;
-}
-
-export interface CreateContextInput {
-  workspaceId: Scalars['String']['input'];
 }
 
 export interface CreateCopilotPromptInput {
@@ -577,11 +589,6 @@ export interface LimitedUserType {
   hasPassword: Maybe<Scalars['Boolean']['output']>;
 }
 
-export interface ListContextFileInput {
-  contextId: Scalars['String']['input'];
-  workspaceId: Scalars['String']['input'];
-}
-
 export interface ListUserInput {
   first?: InputMaybe<Scalars['Int']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -655,8 +662,6 @@ export interface Mutation {
   invite: Scalars['String']['output'];
   inviteBatch: Array<InviteResult>;
   leaveWorkspace: Scalars['Boolean']['output'];
-  /** list files in context */
-  listContextFiles: Array<CopilotContextFile>;
   publishPage: WorkspacePage;
   recoverDoc: Scalars['DateTime']['output'];
   releaseDeletedBlobs: Scalars['Boolean']['output'];
@@ -752,7 +757,8 @@ export interface MutationCreateCheckoutSessionArgs {
 }
 
 export interface MutationCreateCopilotContextArgs {
-  options: CreateContextInput;
+  sessionId: Scalars['String']['input'];
+  workspaceId: Scalars['String']['input'];
 }
 
 export interface MutationCreateCopilotMessageArgs {
@@ -826,10 +832,6 @@ export interface MutationLeaveWorkspaceArgs {
   sendLeaveMail?: InputMaybe<Scalars['Boolean']['input']>;
   workspaceId: Scalars['String']['input'];
   workspaceName?: InputMaybe<Scalars['String']['input']>;
-}
-
-export interface MutationListContextFilesArgs {
-  options: ListContextFileInput;
 }
 
 export interface MutationPublishPageArgs {
@@ -1123,7 +1125,6 @@ export interface RemoveAvatar {
 export interface RemoveContextFileInput {
   contextId: Scalars['String']['input'];
   fileId: Scalars['String']['input'];
-  workspaceId: Scalars['String']['input'];
 }
 
 export interface RuntimeConfigNotFoundDataType {
@@ -1656,6 +1657,16 @@ export type ChangePasswordMutation = {
   changePassword: boolean;
 };
 
+export type CreateCopilotContextMutationVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+  sessionId: Scalars['String']['input'];
+}>;
+
+export type CreateCopilotContextMutation = {
+  __typename?: 'Mutation';
+  createCopilotContext: string;
+};
+
 export type AddContextFileMutationVariables = Exact<{
   options: AddContextFileInput;
 }>;
@@ -1665,29 +1676,31 @@ export type AddContextFileMutation = {
   addContextFile: string;
 };
 
-export type CreateCopilotContextMutationVariables = Exact<{
-  options: CreateContextInput;
+export type ListContextFilesQueryVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+  sessionId: Scalars['String']['input'];
+  contextId: Scalars['String']['input'];
 }>;
 
-export type CreateCopilotContextMutation = {
-  __typename?: 'Mutation';
-  createCopilotContext: string;
-};
-
-export type ListContextFilesMutationVariables = Exact<{
-  options: ListContextFileInput;
-}>;
-
-export type ListContextFilesMutation = {
-  __typename?: 'Mutation';
-  listContextFiles: Array<{
-    __typename?: 'CopilotContextFile';
-    id: string;
-    name: string;
-    chunk_size: number;
-    status: ContextFileStatus;
-    blobId: string;
-  }>;
+export type ListContextFilesQuery = {
+  __typename?: 'Query';
+  currentUser: {
+    __typename?: 'UserType';
+    copilot: {
+      __typename?: 'Copilot';
+      contexts: Array<{
+        __typename?: 'CopilotContext';
+        files: Array<{
+          __typename?: 'CopilotContextFile';
+          id: string;
+          name: string;
+          blobId: string;
+          chunk_size: number;
+          status: ContextFileStatus;
+        }>;
+      }>;
+    };
+  } | null;
 };
 
 export type RemoveContextFileMutationVariables = Exact<{
@@ -1697,6 +1710,22 @@ export type RemoveContextFileMutationVariables = Exact<{
 export type RemoveContextFileMutation = {
   __typename?: 'Mutation';
   removeContextFile: boolean;
+};
+
+export type ListContextQueryVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+  sessionId: Scalars['String']['input'];
+}>;
+
+export type ListContextQuery = {
+  __typename?: 'Query';
+  currentUser: {
+    __typename?: 'UserType';
+    copilot: {
+      __typename?: 'Copilot';
+      contexts: Array<{ __typename?: 'CopilotContext'; id: string }>;
+    };
+  } | null;
 };
 
 export type GetCopilotHistoryIdsQueryVariables = Exact<{
@@ -2969,6 +2998,16 @@ export type Queries =
       response: ListBlobsQuery;
     }
   | {
+      name: 'listContextFilesQuery';
+      variables: ListContextFilesQueryVariables;
+      response: ListContextFilesQuery;
+    }
+  | {
+      name: 'listContextQuery';
+      variables: ListContextQueryVariables;
+      response: ListContextQuery;
+    }
+  | {
       name: 'getCopilotHistoryIdsQuery';
       variables: GetCopilotHistoryIdsQueryVariables;
       response: GetCopilotHistoryIdsQuery;
@@ -3216,19 +3255,14 @@ export type Mutations =
       response: ChangePasswordMutation;
     }
   | {
-      name: 'addContextFileMutation';
-      variables: AddContextFileMutationVariables;
-      response: AddContextFileMutation;
-    }
-  | {
       name: 'createCopilotContextMutation';
       variables: CreateCopilotContextMutationVariables;
       response: CreateCopilotContextMutation;
     }
   | {
-      name: 'listContextFilesMutation';
-      variables: ListContextFilesMutationVariables;
-      response: ListContextFilesMutation;
+      name: 'addContextFileMutation';
+      variables: AddContextFileMutationVariables;
+      response: AddContextFileMutation;
     }
   | {
       name: 'removeContextFileMutation';
