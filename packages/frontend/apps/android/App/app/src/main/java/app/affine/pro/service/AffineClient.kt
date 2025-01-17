@@ -1,29 +1,30 @@
 package app.affine.pro.service
 
-import com.apollographql.apollo.ApolloCall
+import app.affine.pro.BuildConfig
+import app.affine.pro.service.interceptor.CookieInterceptor
 import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.ApolloResponse
 import com.apollographql.apollo.api.Mutation
 import com.apollographql.apollo.api.Query
 import com.apollographql.apollo.api.Subscription
 
 object AffineClient {
 
-    private const val AFFINE_URL = "https://app.affine.pro/graphql"
-
     private val _client: ApolloClient by lazy {
-        ApolloClient.Builder().serverUrl(AFFINE_URL).build()
+        ApolloClient.Builder().serverUrl(BuildConfig.BASE_URL)
+            .addHttpInterceptor(CookieInterceptor)
+            .build()
     }
 
-
-    fun <D : Query.Data> query(query: Query<D>): ApolloCall<D> {
-        return _client.query(query)
+    suspend fun <D : Query.Data> query(query: Query<D>): ApolloResponse<D> {
+        return _client.query(query).execute()
     }
 
-    fun <D : Mutation.Data> mutation(mutation: Mutation<D>): ApolloCall<D> {
-        return _client.mutation(mutation)
+    suspend fun <D : Mutation.Data> mutation(mutation: Mutation<D>): ApolloResponse<D> {
+        return _client.mutation(mutation).execute()
     }
 
-    fun <D : Subscription.Data> subscription(subscription: Subscription<D>): ApolloCall<D> {
-        return _client.subscription(subscription)
+    suspend fun <D : Subscription.Data> subscription(subscription: Subscription<D>): ApolloResponse<D> {
+        return _client.subscription(subscription).execute()
     }
 }
