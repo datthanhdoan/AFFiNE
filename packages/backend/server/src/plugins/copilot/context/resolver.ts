@@ -8,10 +8,12 @@ import {
   Mutation,
   ObjectType,
   Parent,
+  Query,
   registerEnumType,
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { PrismaClient } from '@prisma/client';
 import type { Request } from 'express';
 import { SafeIntResolver } from 'graphql-scalars';
 import GraphQLUpload from 'graphql-upload/GraphQLUpload.mjs';
@@ -21,12 +23,14 @@ import {
   CopilotFailedToMatchContext,
   CopilotFailedToModifyContext,
   CopilotSessionNotFound,
+  EventEmitter,
   type FileUpload,
   RequestMutex,
   Throttle,
   TooManyRequest,
 } from '../../../base';
 import { CurrentUser } from '../../../core/auth';
+import { PermissionService } from '../../../core/permission';
 import { COPILOT_LOCKER, CopilotType } from '../resolver';
 import { ChatSessionService } from '../session';
 import { CopilotContextService } from './service';
@@ -110,11 +114,23 @@ class ContextMatchedFileChunk implements FileChunkSimilarity {
   distance!: number | null;
 }
 
+@ObjectType()
+class ContextWorkspaceEmbeddingStatus {
+  @Field(() => SafeIntResolver)
+  total!: number;
+
+  @Field(() => SafeIntResolver)
+  embedded!: number;
+}
+
 @Throttle()
 @Resolver(() => CopilotType)
 export class CopilotContextRootResolver {
   constructor(
+    private readonly db: PrismaClient,
+    private readonly event: EventEmitter,
     private readonly mutex: RequestMutex,
+    private readonly permissions: PermissionService,
     private readonly chatSession: ChatSessionService,
     private readonly context: CopilotContextService
   ) {}
@@ -172,6 +188,39 @@ export class CopilotContextRootResolver {
 
     const context = await this.context.create(sessionId);
     return context.id;
+  }
+
+  @Mutation(() => Boolean, {
+    description: 'queue workspace doc embedding',
+  })
+  @CallMetric('ai', 'context_queue_workspace_doc')
+  async queueWorkspaceEmbedding(
+    @CurrentUser() user: CurrentUser,
+    @Args('workspaceId') workspaceId: string,
+    @Args('docId', { type: () => [String] }) docIds: string[]
+  ) {
+    await this.permissions.checkCloudWorkspace(workspaceId, user.id);
+    for (const docId of docIds) {
+      this.event.emit('workspace.doc.embedding', { workspaceId, docId });
+    }
+    return true;
+  }
+
+  @Query(() => ContextWorkspaceEmbeddingStatus, {
+    description: 'query workspace embedding status',
+  })
+  @CallMetric('ai', 'context_query_workspace_embedding_status')
+  async queryWorkspaceEmbeddingStatus(
+    @CurrentUser() user: CurrentUser,
+    @Args('workspaceId') workspaceId: string
+  ) {
+    await this.permissions.checkCloudWorkspace(workspaceId, user.id);
+
+    const total = await this.db.snapshot.count({ where: { workspaceId } });
+    const embedded = await this.db.snapshot.count({
+      where: { workspaceId, embedding: { isNot: null } },
+    });
+    return { total, embedded };
   }
 }
 

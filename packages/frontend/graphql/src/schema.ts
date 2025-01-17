@@ -83,6 +83,12 @@ export interface ContextMatchedFileChunk {
   fileId: Scalars['String']['output'];
 }
 
+export interface ContextWorkspaceEmbeddingStatus {
+  __typename?: 'ContextWorkspaceEmbeddingStatus';
+  embedded: Scalars['SafeInt']['output'];
+  total: Scalars['SafeInt']['output'];
+}
+
 export interface Copilot {
   __typename?: 'Copilot';
   /** Get the session list of actions in the workspace */
@@ -687,6 +693,8 @@ export interface Mutation {
   /** remove a file from context */
   matchContext: Array<ContextMatchedFileChunk>;
   publishPage: WorkspacePage;
+  /** queue workspace doc embedding */
+  queueWorkspaceEmbedding: Scalars['Boolean']['output'];
   recoverDoc: Scalars['DateTime']['output'];
   releaseDeletedBlobs: Scalars['Boolean']['output'];
   /** Remove user avatar */
@@ -866,6 +874,11 @@ export interface MutationMatchContextArgs {
 export interface MutationPublishPageArgs {
   mode?: InputMaybe<PublicPageMode>;
   pageId: Scalars['String']['input'];
+  workspaceId: Scalars['String']['input'];
+}
+
+export interface MutationQueueWorkspaceEmbeddingArgs {
+  docId: Array<Scalars['String']['input']>;
   workspaceId: Scalars['String']['input'];
 }
 
@@ -1058,6 +1071,8 @@ export interface Query {
   listCopilotPrompts: Array<CopilotPromptType>;
   listWorkspaceFeatures: Array<WorkspaceType>;
   prices: Array<SubscriptionPrice>;
+  /** query workspace embedding status */
+  queryWorkspaceEmbeddingStatus: ContextWorkspaceEmbeddingStatus;
   /** server config */
   serverConfig: ServerConfigType;
   /** get all server runtime configurable settings */
@@ -1101,6 +1116,10 @@ export interface QueryListBlobsArgs {
 
 export interface QueryListWorkspaceFeaturesArgs {
   feature: FeatureType;
+}
+
+export interface QueryQueryWorkspaceEmbeddingStatusArgs {
+  workspaceId: Scalars['String']['input'];
 }
 
 export interface QueryUserArgs {
@@ -1756,6 +1775,29 @@ export type ListContextQuery = {
       contexts: Array<{ __typename?: 'CopilotContext'; id: string }>;
     };
   } | null;
+};
+
+export type GetWorkspaceEmbeddingStatusQueryVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+}>;
+
+export type GetWorkspaceEmbeddingStatusQuery = {
+  __typename?: 'Query';
+  queryWorkspaceEmbeddingStatus: {
+    __typename?: 'ContextWorkspaceEmbeddingStatus';
+    total: number;
+    embedded: number;
+  };
+};
+
+export type QueueWorkspaceEmbeddingMutationVariables = Exact<{
+  workspaceId: Scalars['String']['input'];
+  docId: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+export type QueueWorkspaceEmbeddingMutation = {
+  __typename?: 'Mutation';
+  queueWorkspaceEmbedding: boolean;
 };
 
 export type GetCopilotHistoryIdsQueryVariables = Exact<{
@@ -3038,6 +3080,11 @@ export type Queries =
       response: ListContextQuery;
     }
   | {
+      name: 'getWorkspaceEmbeddingStatusQuery';
+      variables: GetWorkspaceEmbeddingStatusQueryVariables;
+      response: GetWorkspaceEmbeddingStatusQuery;
+    }
+  | {
       name: 'getCopilotHistoryIdsQuery';
       variables: GetCopilotHistoryIdsQueryVariables;
       response: GetCopilotHistoryIdsQuery;
@@ -3298,6 +3345,11 @@ export type Mutations =
       name: 'removeContextFileMutation';
       variables: RemoveContextFileMutationVariables;
       response: RemoveContextFileMutation;
+    }
+  | {
+      name: 'queueWorkspaceEmbeddingMutation';
+      variables: QueueWorkspaceEmbeddingMutationVariables;
+      response: QueueWorkspaceEmbeddingMutation;
     }
   | {
       name: 'createCopilotMessageMutation';

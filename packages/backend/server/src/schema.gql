@@ -44,6 +44,11 @@ type ContextMatchedFileChunk {
   fileId: String!
 }
 
+type ContextWorkspaceEmbeddingStatus {
+  embedded: SafeInt!
+  total: SafeInt!
+}
+
 type Copilot {
   """Get the session list of actions in the workspace"""
   actions: [String!]!
@@ -622,6 +627,9 @@ type Mutation {
   """remove a file from context"""
   matchContext(options: MatchContextInput!): [ContextMatchedFileChunk!]!
   publishPage(mode: PublicPageMode = Page, pageId: String!, workspaceId: String!): WorkspacePage!
+
+  """queue workspace doc embedding"""
+  queueWorkspaceEmbedding(docId: [String!]!, workspaceId: String!): Boolean!
   recoverDoc(guid: String!, timestamp: DateTime!, workspaceId: String!): DateTime!
   releaseDeletedBlobs(workspaceId: String!): Boolean!
 
@@ -725,6 +733,9 @@ type Query {
   listCopilotPrompts: [CopilotPromptType!]!
   listWorkspaceFeatures(feature: FeatureType!): [WorkspaceType!]!
   prices: [SubscriptionPrice!]!
+
+  """query workspace embedding status"""
+  queryWorkspaceEmbeddingStatus(workspaceId: String!): ContextWorkspaceEmbeddingStatus!
 
   """server config"""
   serverConfig: ServerConfigType!

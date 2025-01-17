@@ -217,6 +217,31 @@ query listContext($workspaceId: String!, $sessionId: String!) {
 }`,
 };
 
+export const getWorkspaceEmbeddingStatusQuery = {
+  id: 'getWorkspaceEmbeddingStatusQuery' as const,
+  operationName: 'getWorkspaceEmbeddingStatus',
+  definitionName: 'queryWorkspaceEmbeddingStatus',
+  containsFile: false,
+  query: `
+query getWorkspaceEmbeddingStatus($workspaceId: String!) {
+  queryWorkspaceEmbeddingStatus(workspaceId: $workspaceId) {
+    total
+    embedded
+  }
+}`,
+};
+
+export const queueWorkspaceEmbeddingMutation = {
+  id: 'queueWorkspaceEmbeddingMutation' as const,
+  operationName: 'queueWorkspaceEmbedding',
+  definitionName: 'queueWorkspaceEmbedding',
+  containsFile: false,
+  query: `
+mutation queueWorkspaceEmbedding($workspaceId: String!, $docId: [String!]!) {
+  queueWorkspaceEmbedding(workspaceId: $workspaceId, docId: $docId)
+}`,
+};
+
 export const getCopilotHistoryIdsQuery = {
   id: 'getCopilotHistoryIdsQuery' as const,
   operationName: 'getCopilotHistoryIds',
