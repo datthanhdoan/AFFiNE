@@ -39,7 +39,6 @@ export interface Scalars {
 
 export interface AddContextFileInput {
   blobId: Scalars['String']['input'];
-  content: Scalars['Upload']['input'];
   contextId: Scalars['String']['input'];
   fileName: Scalars['String']['input'];
 }
@@ -74,6 +73,14 @@ export enum ContextFileStatus {
   failed = 'failed',
   finished = 'finished',
   processing = 'processing',
+}
+
+export interface ContextMatchedFileChunk {
+  __typename?: 'ContextMatchedFileChunk';
+  chunk: Scalars['SafeInt']['output'];
+  content: Scalars['String']['output'];
+  distance: Maybe<Scalars['Float']['output']>;
+  fileId: Scalars['String']['output'];
 }
 
 export interface Copilot {
@@ -113,10 +120,17 @@ export interface CopilotContextFilesArgs {
 export interface CopilotContextFile {
   __typename?: 'CopilotContextFile';
   blobId: Scalars['String']['output'];
-  chunk_size: Scalars['Int']['output'];
+  chunk_size: Scalars['SafeInt']['output'];
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   status: ContextFileStatus;
+}
+
+export interface CopilotFailedToMatchContextDataType {
+  __typename?: 'CopilotFailedToMatchContextDataType';
+  content: Scalars['String']['output'];
+  contextId: Scalars['String']['output'];
+  message: Scalars['String']['output'];
 }
 
 export interface CopilotFailedToModifyContextDataType {
@@ -312,6 +326,7 @@ export interface EditorType {
 export type ErrorDataUnion =
   | AlreadyInSpaceDataType
   | BlobNotFoundDataType
+  | CopilotFailedToMatchContextDataType
   | CopilotFailedToModifyContextDataType
   | CopilotInvalidContextDataType
   | CopilotMessageNotFoundDataType
@@ -356,6 +371,7 @@ export enum ErrorNames {
   COPILOT_ACTION_TAKEN = 'COPILOT_ACTION_TAKEN',
   COPILOT_FAILED_TO_CREATE_MESSAGE = 'COPILOT_FAILED_TO_CREATE_MESSAGE',
   COPILOT_FAILED_TO_GENERATE_TEXT = 'COPILOT_FAILED_TO_GENERATE_TEXT',
+  COPILOT_FAILED_TO_MATCH_CONTEXT = 'COPILOT_FAILED_TO_MATCH_CONTEXT',
   COPILOT_FAILED_TO_MODIFY_CONTEXT = 'COPILOT_FAILED_TO_MODIFY_CONTEXT',
   COPILOT_INVALID_CONTEXT = 'COPILOT_INVALID_CONTEXT',
   COPILOT_MESSAGE_NOT_FOUND = 'COPILOT_MESSAGE_NOT_FOUND',
@@ -609,6 +625,12 @@ export interface ManageUserInput {
   name?: InputMaybe<Scalars['String']['input']>;
 }
 
+export interface MatchContextInput {
+  content: Scalars['String']['input'];
+  contextId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['SafeInt']['input']>;
+}
+
 export interface MemberNotFoundInSpaceDataType {
   __typename?: 'MemberNotFoundInSpaceDataType';
   spaceId: Scalars['String']['output'];
@@ -662,6 +684,8 @@ export interface Mutation {
   invite: Scalars['String']['output'];
   inviteBatch: Array<InviteResult>;
   leaveWorkspace: Scalars['Boolean']['output'];
+  /** remove a file from context */
+  matchContext: Array<ContextMatchedFileChunk>;
   publishPage: WorkspacePage;
   recoverDoc: Scalars['DateTime']['output'];
   releaseDeletedBlobs: Scalars['Boolean']['output'];
@@ -713,6 +737,7 @@ export interface MutationAcceptInviteByIdArgs {
 }
 
 export interface MutationAddContextFileArgs {
+  content: Scalars['Upload']['input'];
   options: AddContextFileInput;
 }
 
@@ -832,6 +857,10 @@ export interface MutationLeaveWorkspaceArgs {
   sendLeaveMail?: InputMaybe<Scalars['Boolean']['input']>;
   workspaceId: Scalars['String']['input'];
   workspaceName?: InputMaybe<Scalars['String']['input']>;
+}
+
+export interface MutationMatchContextArgs {
+  options: MatchContextInput;
 }
 
 export interface MutationPublishPageArgs {
@@ -1668,6 +1697,7 @@ export type CreateCopilotContextMutation = {
 };
 
 export type AddContextFileMutationVariables = Exact<{
+  content: Scalars['Upload']['input'];
   options: AddContextFileInput;
 }>;
 

@@ -161,8 +161,8 @@ export const addContextFileMutation = {
   definitionName: 'addContextFile',
   containsFile: true,
   query: `
-mutation addContextFile($options: AddContextFileInput!) {
-  addContextFile(options: $options)
+mutation addContextFile($content: Upload!, $options: AddContextFileInput!) {
+  addContextFile(content: $content, options: $options)
 }`,
 };
 
