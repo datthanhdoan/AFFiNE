@@ -1,4 +1,17 @@
+import { File } from 'node:buffer';
+
 import { z } from 'zod';
+
+import { parseDoc } from '../../../native';
+
+declare global {
+  interface Events {
+    'workspace.doc.embedding': {
+      workspaceId: string;
+      docId: string;
+    };
+  }
+}
 
 export enum ContextFileStatus {
   processing = 'processing',
@@ -37,9 +50,29 @@ export type Embedding = {
    * The index of the embedding in the list of embeddings.
    */
   index: number;
+  content: string;
   embedding: Array<number>;
 };
 
-export interface EmbeddingClient {
-  getEmbeddings(input: string[], signal?: AbortSignal): Promise<Embedding[]>;
+export abstract class EmbeddingClient {
+  async getFileEmbeddings(
+    file: File,
+    signal?: AbortSignal
+  ): Promise<Embedding[] | undefined> {
+    if (signal?.aborted) return;
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const doc = await parseDoc(file.name, buffer);
+    if (doc && !signal?.aborted) {
+      const input = doc.chunks
+        .toSorted((a, b) => a.index - b.index)
+        .map(chunk => chunk.content);
+      return await this.getEmbeddings(input, signal);
+    }
+    return;
+  }
+
+  abstract getEmbeddings(
+    input: string[],
+    signal?: AbortSignal
+  ): Promise<Embedding[]>;
 }

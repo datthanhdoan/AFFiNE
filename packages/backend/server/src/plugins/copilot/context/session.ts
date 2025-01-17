@@ -7,7 +7,6 @@ import { nanoid } from 'nanoid';
 
 import { BlobQuotaExceeded, PrismaTransaction } from '../../../base';
 import { OneMB } from '../../../core/quota/constant';
-import { parseDoc } from '../../../native';
 import {
   ContextConfig,
   ContextFile,
@@ -33,17 +32,13 @@ export class ContextSession implements AsyncDisposable {
     return this.config.files.map(f => ({ ...f }));
   }
 
-  private processEmbeddings(
-    fileId: string,
-    input: string[],
-    embeddings: Embedding[]
-  ) {
+  private processEmbeddings(fileId: string, embeddings: Embedding[]) {
     const groups = embeddings.map(e => [
       randomUUID(),
       this.contextId,
       fileId,
       e.index,
-      input[e.index],
+      e.content,
       Prisma.raw(`'[${e.embedding.join(',')}]'`),
       new Date(),
     ]);
@@ -53,18 +48,17 @@ export class ContextSession implements AsyncDisposable {
   private async insertEmbeddings(
     name: string,
     blobId: string,
-    input: string[],
     embeddings: Embedding[]
   ) {
     const fileId = nanoid();
     await this.saveFileRecord(fileId, file => ({
       ...file,
       blobId,
-      chunk_size: input.length,
+      chunk_size: embeddings.length,
       name,
     }));
 
-    const values = this.processEmbeddings(fileId, input, embeddings);
+    const values = this.processEmbeddings(fileId, embeddings);
     return this.db.$transaction(async tx => {
       await tx.$executeRaw`
         INSERT INTO "ai_context_embeddings"
@@ -72,10 +66,14 @@ export class ContextSession implements AsyncDisposable {
         ON CONFLICT (context_id, file_id, chunk) DO UPDATE SET
         content = EXCLUDED.content, embedding = EXCLUDED.embedding, updated_at = excluded.updated_at;
       `;
-      await this.saveFileRecord(fileId, file => ({
-        ...(file as ContextFile),
-        status: ContextFileStatus.finished,
-      }));
+      await this.saveFileRecord(
+        fileId,
+        file => ({
+          ...(file as ContextFile),
+          status: ContextFileStatus.finished,
+        }),
+        tx
+      );
       return fileId;
     });
   }
@@ -125,15 +123,9 @@ export class ContextSession implements AsyncDisposable {
     blobId: string,
     signal?: AbortSignal
   ): Promise<string | undefined> {
-    if (signal?.aborted) return;
-    const buffer = new Uint8Array(await file.arrayBuffer());
-    const doc = await parseDoc(file.name, buffer);
-    if (doc && !signal?.aborted) {
-      const input = doc.chunks
-        .toSorted((a, b) => a.index - b.index)
-        .map(chunk => chunk.content);
-      const embeddings = await this.client.getEmbeddings(input, signal);
-      return await this.insertEmbeddings(file.name, blobId, input, embeddings);
+    const embeddings = await this.client.getFileEmbeddings(file, signal);
+    if (embeddings && !signal?.aborted) {
+      return await this.insertEmbeddings(file.name, blobId, embeddings);
     }
     return undefined;
   }

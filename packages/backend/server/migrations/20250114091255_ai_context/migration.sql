@@ -30,6 +30,8 @@ CREATE TABLE "ai_context_embeddings" (
 CREATE TABLE "ai_workspace_embeddings" (
     "workspace_id" VARCHAR NOT NULL,
     "doc_id" VARCHAR NOT NULL,
+    "chunk" INTEGER NOT NULL,
+    "content" VARCHAR NOT NULL,
     "embedding" vector(512) NOT NULL,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,

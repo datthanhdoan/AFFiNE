@@ -2,8 +2,10 @@ import OpenAI from 'openai';
 
 import { Embedding, EmbeddingClient } from './types';
 
-export class OpenAIEmbeddingClient implements EmbeddingClient {
-  constructor(private readonly client: OpenAI) {}
+export class OpenAIEmbeddingClient extends EmbeddingClient {
+  constructor(private readonly client: OpenAI) {
+    super();
+  }
 
   async getEmbeddings(
     input: string[],
@@ -18,14 +20,15 @@ export class OpenAIEmbeddingClient implements EmbeddingClient {
       },
       { signal }
     );
-    return resp.data;
+    return resp.data.map(e => ({ ...e, content: input[e.index] }));
   }
 }
 
-export class MockEmbeddingClient implements EmbeddingClient {
+export class MockEmbeddingClient extends EmbeddingClient {
   async getEmbeddings(input: string[]): Promise<Embedding[]> {
     return input.map((_, i) => ({
       index: i,
+      content: input[i],
       embedding: Array.from({ length: 512 }, () => Math.random()),
     }));
   }
