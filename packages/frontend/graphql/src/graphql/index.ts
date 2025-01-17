@@ -155,6 +155,28 @@ mutation createCopilotContext($workspaceId: String!, $sessionId: String!) {
 }`,
 };
 
+export const addContextDocMutation = {
+  id: 'addContextDocMutation' as const,
+  operationName: 'addContextDoc',
+  definitionName: 'addContextDoc',
+  containsFile: false,
+  query: `
+mutation addContextDoc($options: AddContextDocInput!) {
+  addContextDoc(options: $options)
+}`,
+};
+
+export const removeContextDocMutation = {
+  id: 'removeContextDocMutation' as const,
+  operationName: 'removeContextDoc',
+  definitionName: 'removeContextDoc',
+  containsFile: false,
+  query: `
+mutation removeContextDoc($options: RemoveContextFileInput!) {
+  removeContextDoc(options: $options)
+}`,
+};
+
 export const addContextFileMutation = {
   id: 'addContextFileMutation' as const,
   operationName: 'addContextFile',
@@ -176,6 +198,7 @@ query listContextFiles($workspaceId: String!, $sessionId: String!, $contextId: S
   currentUser {
     copilot(workspaceId: $workspaceId) {
       contexts(sessionId: $sessionId) {
+        docs(contextId: $contextId)
         files(contextId: $contextId) {
           id
           name

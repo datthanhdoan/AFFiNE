@@ -33,6 +33,7 @@ export const ContextConfigSchema = z.object({
       blobId: z.string(),
     })
     .array(),
+  docs: z.string().array(),
 });
 
 export type ContextConfig = z.infer<typeof ContextConfigSchema>;

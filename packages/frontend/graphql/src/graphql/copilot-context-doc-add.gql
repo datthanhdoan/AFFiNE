@@ -1,0 +1,3 @@
+mutation addContextDoc($options: AddContextDocInput!) {
+  addContextDoc(options: $options)
+}

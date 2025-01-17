@@ -41,6 +41,15 @@ import {
 } from './types';
 
 @InputType()
+class AddContextDocInput {
+  @Field(() => String)
+  contextId!: string;
+
+  @Field(() => String)
+  docId!: string;
+}
+
+@InputType()
 class AddContextFileInput {
   @Field(() => String)
   contextId!: string;
@@ -238,6 +247,69 @@ export class CopilotContextResolver {
     return controller.signal;
   }
 
+  @ResolveField(() => [String], {
+    description: 'list files in context',
+  })
+  @CallMetric('ai', 'context_file_list')
+  async docs(
+    @Parent() context: CopilotContextType,
+    @Args('contextId', { nullable: true }) contextId?: string
+  ): Promise<string[]> {
+    const id = contextId || context.id;
+    const session = await this.context.get(id);
+    return await session.listDocs();
+  }
+
+  @Mutation(() => SafeIntResolver, {
+    description: 'add a doc to context',
+  })
+  @CallMetric('ai', 'context_doc_add')
+  async addContextDoc(
+    @Args({ name: 'options', type: () => AddContextDocInput })
+    options: AddContextDocInput
+  ) {
+    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
+    await using lock = await this.mutex.acquire(lockFlag);
+    if (!lock) {
+      return new TooManyRequest('Server is busy');
+    }
+    const session = await this.context.get(options.contextId);
+
+    try {
+      return await session.addDocRecord(options.docId);
+    } catch (e: any) {
+      throw new CopilotFailedToModifyContext({
+        contextId: options.contextId,
+        message: e.message,
+      });
+    }
+  }
+
+  @Mutation(() => Boolean, {
+    description: 'remove a doc from context',
+  })
+  @CallMetric('ai', 'context_doc_remove')
+  async removeContextDoc(
+    @Args({ name: 'options', type: () => RemoveContextFileInput })
+    options: RemoveContextFileInput
+  ) {
+    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
+    await using lock = await this.mutex.acquire(lockFlag);
+    if (!lock) {
+      return new TooManyRequest('Server is busy');
+    }
+    const session = await this.context.get(options.contextId);
+
+    try {
+      return await session.removeDocRecord(options.fileId);
+    } catch (e: any) {
+      throw new CopilotFailedToModifyContext({
+        contextId: options.contextId,
+        message: e.message,
+      });
+    }
+  }
+
   @ResolveField(() => [CopilotContextFile], {
     description: 'list files in context',
   })
@@ -245,16 +317,10 @@ export class CopilotContextResolver {
   async files(
     @Parent() context: CopilotContextType,
     @Args('contextId', { nullable: true }) contextId?: string
-  ): Promise<CopilotContextFile[] | TooManyRequest> {
+  ): Promise<CopilotContextFile[]> {
     const id = contextId || context.id;
-    const lockFlag = `${COPILOT_LOCKER}:context:${id}`;
-    await using lock = await this.mutex.acquire(lockFlag);
-    if (!lock) {
-      return new TooManyRequest('Server is busy');
-    }
     const session = await this.context.get(id);
-
-    return await session.list();
+    return await session.listFiles();
   }
 
   @Mutation(() => String, {

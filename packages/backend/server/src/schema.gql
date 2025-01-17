@@ -2,6 +2,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AddContextDocInput {
+  contextId: String!
+  docId: String!
+}
+
 input AddContextFileInput {
   blobId: String!
   contextId: String!
@@ -66,6 +71,9 @@ type Copilot {
 }
 
 type CopilotContext {
+  """list files in context"""
+  docs(contextId: String): [String!]!
+
   """list files in context"""
   files(contextId: String): [CopilotContextFile!]!
   id: ID!
@@ -569,6 +577,9 @@ type Mutation {
   acceptInviteById(inviteId: String!, sendAcceptMail: Boolean, workspaceId: String!): Boolean!
   activateLicense(license: String!, workspaceId: String!): License!
 
+  """add a doc to context"""
+  addContextDoc(options: AddContextDocInput!): SafeInt!
+
   """add a file to context"""
   addContextFile(content: Upload!, options: AddContextFileInput!): String!
   addWorkspaceFeature(feature: FeatureType!, workspaceId: String!): Int!
@@ -635,6 +646,9 @@ type Mutation {
 
   """Remove user avatar"""
   removeAvatar: RemoveAvatar!
+
+  """remove a doc from context"""
+  removeContextDoc(options: RemoveContextFileInput!): Boolean!
 
   """remove a file from context"""
   removeContextFile(options: RemoveContextFileInput!): Boolean!

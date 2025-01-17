@@ -28,7 +28,11 @@ export class ContextSession implements AsyncDisposable {
     return this.contextId;
   }
 
-  async list() {
+  async listDocs() {
+    return [...this.config.docs];
+  }
+
+  async listFiles() {
     return this.config.files.map(f => ({ ...f }));
   }
 
@@ -104,6 +108,24 @@ export class ContextSession implements AsyncDisposable {
         reject(err);
       });
     });
+  }
+
+  async addDocRecord(docId: string) {
+    if (!this.config.docs.includes(docId)) {
+      this.config.docs.push(docId);
+      await this.save();
+    }
+    return this.config.docs.length;
+  }
+
+  async removeDocRecord(docId: string) {
+    const index = this.config.docs.indexOf(docId);
+    if (index >= 0) {
+      this.config.docs.splice(index, 1);
+      await this.save();
+      return true;
+    }
+    return false;
   }
 
   async addStream(

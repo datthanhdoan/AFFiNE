@@ -37,6 +37,11 @@ export interface Scalars {
   Upload: { input: File; output: File };
 }
 
+export interface AddContextDocInput {
+  contextId: Scalars['String']['input'];
+  docId: Scalars['String']['input'];
+}
+
 export interface AddContextFileInput {
   blobId: Scalars['String']['input'];
   contextId: Scalars['String']['input'];
@@ -115,8 +120,14 @@ export interface CopilotHistoriesArgs {
 export interface CopilotContext {
   __typename?: 'CopilotContext';
   /** list files in context */
+  docs: Array<Scalars['String']['output']>;
+  /** list files in context */
   files: Array<CopilotContextFile>;
   id: Scalars['ID']['output'];
+}
+
+export interface CopilotContextDocsArgs {
+  contextId?: InputMaybe<Scalars['String']['input']>;
 }
 
 export interface CopilotContextFilesArgs {
@@ -650,6 +661,8 @@ export interface MissingOauthQueryParameterDataType {
 export interface Mutation {
   __typename?: 'Mutation';
   acceptInviteById: Scalars['Boolean']['output'];
+  /** add a doc to context */
+  addContextDoc: Scalars['SafeInt']['output'];
   /** add a file to context */
   addContextFile: Scalars['String']['output'];
   addWorkspaceFeature: Scalars['Int']['output'];
@@ -699,6 +712,8 @@ export interface Mutation {
   releaseDeletedBlobs: Scalars['Boolean']['output'];
   /** Remove user avatar */
   removeAvatar: RemoveAvatar;
+  /** remove a doc from context */
+  removeContextDoc: Scalars['Boolean']['output'];
   /** remove a file from context */
   removeContextFile: Scalars['Boolean']['output'];
   removeWorkspaceFeature: Scalars['Int']['output'];
@@ -742,6 +757,10 @@ export interface MutationAcceptInviteByIdArgs {
   inviteId: Scalars['String']['input'];
   sendAcceptMail?: InputMaybe<Scalars['Boolean']['input']>;
   workspaceId: Scalars['String']['input'];
+}
+
+export interface MutationAddContextDocArgs {
+  options: AddContextDocInput;
 }
 
 export interface MutationAddContextFileArgs {
@@ -890,6 +909,10 @@ export interface MutationRecoverDocArgs {
 
 export interface MutationReleaseDeletedBlobsArgs {
   workspaceId: Scalars['String']['input'];
+}
+
+export interface MutationRemoveContextDocArgs {
+  options: RemoveContextFileInput;
 }
 
 export interface MutationRemoveContextFileArgs {
@@ -1715,6 +1738,24 @@ export type CreateCopilotContextMutation = {
   createCopilotContext: string;
 };
 
+export type AddContextDocMutationVariables = Exact<{
+  options: AddContextDocInput;
+}>;
+
+export type AddContextDocMutation = {
+  __typename?: 'Mutation';
+  addContextDoc: number;
+};
+
+export type RemoveContextDocMutationVariables = Exact<{
+  options: RemoveContextFileInput;
+}>;
+
+export type RemoveContextDocMutation = {
+  __typename?: 'Mutation';
+  removeContextDoc: boolean;
+};
+
 export type AddContextFileMutationVariables = Exact<{
   content: Scalars['Upload']['input'];
   options: AddContextFileInput;
@@ -1739,6 +1780,7 @@ export type ListContextFilesQuery = {
       __typename?: 'Copilot';
       contexts: Array<{
         __typename?: 'CopilotContext';
+        docs: Array<string>;
         files: Array<{
           __typename?: 'CopilotContextFile';
           id: string;
@@ -3335,6 +3377,16 @@ export type Mutations =
       name: 'createCopilotContextMutation';
       variables: CreateCopilotContextMutationVariables;
       response: CreateCopilotContextMutation;
+    }
+  | {
+      name: 'addContextDocMutation';
+      variables: AddContextDocMutationVariables;
+      response: AddContextDocMutation;
+    }
+  | {
+      name: 'removeContextDocMutation';
+      variables: RemoveContextDocMutationVariables;
+      response: RemoveContextDocMutation;
     }
   | {
       name: 'addContextFileMutation';
