@@ -20,6 +20,7 @@ export enum ContextFileStatus {
 }
 
 export const ContextConfigSchema = z.object({
+  workspaceId: z.string(),
   files: z
     .object({
       id: z.string(),
@@ -39,11 +40,18 @@ export const ContextConfigSchema = z.object({
 export type ContextConfig = z.infer<typeof ContextConfigSchema>;
 export type ContextFile = z.infer<typeof ContextConfigSchema>['files'][number];
 
-export type FileChunkSimilarity = {
-  fileId: string;
+export type ChunkSimilarity = {
   chunk: number;
   content: string;
   distance: number | null;
+};
+
+export type FileChunkSimilarity = ChunkSimilarity & {
+  fileId: string;
+};
+
+export type DocChunkSimilarity = ChunkSimilarity & {
+  docId: string;
 };
 
 export type Embedding = {

@@ -409,10 +409,10 @@ model AiSession {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  prompt    AiPrompt           @relation(fields: [promptName], references: [name], onDelete: Cascade)
-  messages  AiSessionMessage[]
-  AiContext AiContext[]
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt   AiPrompt           @relation(fields: [promptName], references: [name], onDelete: Cascade)
+  messages AiSessionMessage[]
+  context  AiContext[]
 
   @@index([userId])
   @@index([userId, workspaceId])
@@ -453,11 +453,11 @@ model AiContextEmbedding {
 }
 
 model AiWorkspaceEmbedding {
-  workspaceId String                      @map("workspace_id") @db.VarChar
-  docId       String                      @map("doc_id") @db.VarChar
+  workspaceId String                     @map("workspace_id") @db.VarChar
+  docId       String                     @map("doc_id") @db.VarChar
   // a doc can be divided into multiple chunks and embedded separately.
-  chunk       Int                         @db.Integer
-  content     String                      @db.VarChar
+  chunk       Int                        @db.Integer
+  content     String                     @db.VarChar
   embedding   Unsupported("vector(512)")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)

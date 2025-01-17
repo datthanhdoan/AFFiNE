@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import {
   Config,
   CopilotInvalidContext,
+  CopilotSessionNotFound,
   NoCopilotProviderAvailable,
 } from '../../../base';
 import { OpenAIEmbeddingClient } from './embedding';
@@ -46,9 +47,21 @@ export class CopilotContextService {
   }
 
   async create(sessionId: string): Promise<ContextSession> {
-    const context = await this.db.aiContext.create({
-      data: { sessionId, config: { files: [] } },
+    const session = await this.db.aiSession.findFirst({
+      where: { id: sessionId },
+      select: { workspaceId: true },
     });
+    if (!session) {
+      throw new CopilotSessionNotFound();
+    }
+
+    const context = await this.db.aiContext.create({
+      data: {
+        sessionId,
+        config: { workspaceId: session.workspaceId, files: [] },
+      },
+    });
+
     const config = ContextConfigSchema.parse(context.config);
     return this.cacheSession(context.id, config);
   }

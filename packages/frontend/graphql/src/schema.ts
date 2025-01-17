@@ -80,6 +80,14 @@ export enum ContextFileStatus {
   processing = 'processing',
 }
 
+export interface ContextMatchedDocChunk {
+  __typename?: 'ContextMatchedDocChunk';
+  chunk: Scalars['SafeInt']['output'];
+  content: Scalars['String']['output'];
+  distance: Maybe<Scalars['Float']['output']>;
+  docId: Scalars['String']['output'];
+}
+
 export interface ContextMatchedFileChunk {
   __typename?: 'ContextMatchedFileChunk';
   chunk: Scalars['SafeInt']['output'];
@@ -642,12 +650,6 @@ export interface ManageUserInput {
   name?: InputMaybe<Scalars['String']['input']>;
 }
 
-export interface MatchContextInput {
-  content: Scalars['String']['input'];
-  contextId: Scalars['String']['input'];
-  limit?: InputMaybe<Scalars['SafeInt']['input']>;
-}
-
 export interface MemberNotFoundInSpaceDataType {
   __typename?: 'MemberNotFoundInSpaceDataType';
   spaceId: Scalars['String']['output'];
@@ -705,6 +707,8 @@ export interface Mutation {
   leaveWorkspace: Scalars['Boolean']['output'];
   /** remove a file from context */
   matchContext: Array<ContextMatchedFileChunk>;
+  /** match workspace doc */
+  matchWorkspaceContext: ContextMatchedDocChunk;
   publishPage: WorkspacePage;
   /** queue workspace doc embedding */
   queueWorkspaceEmbedding: Scalars['Boolean']['output'];
@@ -887,7 +891,15 @@ export interface MutationLeaveWorkspaceArgs {
 }
 
 export interface MutationMatchContextArgs {
-  options: MatchContextInput;
+  content: Scalars['String']['input'];
+  contextId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['SafeInt']['input']>;
+}
+
+export interface MutationMatchWorkspaceContextArgs {
+  content: Scalars['String']['input'];
+  contextId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['SafeInt']['input']>;
 }
 
 export interface MutationPublishPageArgs {
@@ -1794,6 +1806,23 @@ export type ListContextFilesQuery = {
   } | null;
 };
 
+export type MatchContextMutationVariables = Exact<{
+  contextId: Scalars['String']['input'];
+  content: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['SafeInt']['input']>;
+}>;
+
+export type MatchContextMutation = {
+  __typename?: 'Mutation';
+  matchContext: Array<{
+    __typename?: 'ContextMatchedFileChunk';
+    fileId: string;
+    chunk: number;
+    content: string;
+    distance: number | null;
+  }>;
+};
+
 export type RemoveContextFileMutationVariables = Exact<{
   options: RemoveContextFileInput;
 }>;
@@ -1817,6 +1846,23 @@ export type ListContextQuery = {
       contexts: Array<{ __typename?: 'CopilotContext'; id: string }>;
     };
   } | null;
+};
+
+export type MatchWorkspaceContextMutationVariables = Exact<{
+  contextId: Scalars['String']['input'];
+  content: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['SafeInt']['input']>;
+}>;
+
+export type MatchWorkspaceContextMutation = {
+  __typename?: 'Mutation';
+  matchWorkspaceContext: {
+    __typename?: 'ContextMatchedDocChunk';
+    docId: string;
+    chunk: number;
+    content: string;
+    distance: number | null;
+  };
 };
 
 export type GetWorkspaceEmbeddingStatusQueryVariables = Exact<{
@@ -3394,9 +3440,19 @@ export type Mutations =
       response: AddContextFileMutation;
     }
   | {
+      name: 'matchContextMutation';
+      variables: MatchContextMutationVariables;
+      response: MatchContextMutation;
+    }
+  | {
       name: 'removeContextFileMutation';
       variables: RemoveContextFileMutationVariables;
       response: RemoveContextFileMutation;
+    }
+  | {
+      name: 'matchWorkspaceContextMutation';
+      variables: MatchWorkspaceContextMutationVariables;
+      response: MatchWorkspaceContextMutation;
     }
   | {
       name: 'queueWorkspaceEmbeddingMutation';

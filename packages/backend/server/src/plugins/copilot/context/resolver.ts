@@ -37,6 +37,7 @@ import { CopilotContextService } from './service';
 import {
   type ContextFile,
   ContextFileStatus,
+  DocChunkSimilarity,
   FileChunkSimilarity,
 } from './types';
 
@@ -68,18 +69,6 @@ class RemoveContextFileInput {
 
   @Field(() => String)
   fileId!: string;
-}
-
-@InputType()
-class MatchContextInput {
-  @Field(() => String)
-  contextId!: string;
-
-  @Field(() => String)
-  content!: string;
-
-  @Field(() => SafeIntResolver, { nullable: true })
-  limit?: number;
 }
 
 @ObjectType('CopilotContext')
@@ -130,6 +119,21 @@ class ContextWorkspaceEmbeddingStatus {
 
   @Field(() => SafeIntResolver)
   embedded!: number;
+}
+
+@ObjectType()
+class ContextMatchedDocChunk implements DocChunkSimilarity {
+  @Field(() => String)
+  docId!: string;
+
+  @Field(() => SafeIntResolver)
+  chunk!: number;
+
+  @Field(() => String)
+  content!: string;
+
+  @Field(() => Float, { nullable: true })
+  distance!: number | null;
 }
 
 @Throttle()
@@ -238,6 +242,7 @@ export class CopilotContextRootResolver {
 export class CopilotContextResolver {
   constructor(
     private readonly mutex: RequestMutex,
+    private readonly permissions: PermissionService,
     private readonly context: CopilotContextService
   ) {}
 
@@ -388,27 +393,52 @@ export class CopilotContextResolver {
   @CallMetric('ai', 'context_file_remove')
   async matchContext(
     @Context() ctx: { req: Request },
-    @Args({ name: 'options', type: () => MatchContextInput })
-    options: MatchContextInput
+    @Args('contextId') contextId: string,
+    @Args('content') content: string,
+    @Args('limit', { type: () => SafeIntResolver, nullable: true })
+    limit?: number
   ) {
-    const lockFlag = `${COPILOT_LOCKER}:context:${options.contextId}`;
+    const lockFlag = `${COPILOT_LOCKER}:context:${contextId}`;
     await using lock = await this.mutex.acquire(lockFlag);
     if (!lock) {
       return new TooManyRequest('Server is busy');
     }
-    const session = await this.context.get(options.contextId);
+    const session = await this.context.get(contextId);
 
     try {
-      return await session.match(
-        options.content,
-        options.limit,
-        this.getSignal(ctx.req)
-      );
+      return await session.match(content, limit, this.getSignal(ctx.req));
     } catch (e: any) {
       throw new CopilotFailedToMatchContext({
-        contextId: options.contextId,
+        contextId,
         // don't record the large content
-        content: options.content.slice(0, 512),
+        content: content.slice(0, 512),
+        message: e.message,
+      });
+    }
+  }
+
+  @Mutation(() => ContextMatchedDocChunk, {
+    description: 'match workspace doc',
+  })
+  @CallMetric('ai', 'context_match_workspace_doc')
+  async matchWorkspaceContext(
+    @CurrentUser() user: CurrentUser,
+    @Context() ctx: { req: Request },
+    @Args('contextId') contextId: string,
+    @Args('content') content: string,
+    @Args('limit', { type: () => SafeIntResolver, nullable: true })
+    limit?: number
+  ) {
+    const session = await this.context.get(contextId);
+    await this.permissions.checkCloudWorkspace(session.workspaceId, user.id);
+
+    try {
+      return await session.match(content, limit, this.getSignal(ctx.req));
+    } catch (e: any) {
+      throw new CopilotFailedToMatchContext({
+        contextId,
+        // don't record the large content
+        content: content.slice(0, 512),
         message: e.message,
       });
     }

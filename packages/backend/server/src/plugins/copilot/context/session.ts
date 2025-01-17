@@ -11,6 +11,7 @@ import {
   ContextConfig,
   ContextFile,
   ContextFileStatus,
+  DocChunkSimilarity,
   Embedding,
   EmbeddingClient,
   FileChunkSimilarity,
@@ -26,6 +27,10 @@ export class ContextSession implements AsyncDisposable {
 
   get id() {
     return this.contextId;
+  }
+
+  get workspaceId() {
+    return this.config.workspaceId;
   }
 
   async listDocs() {
@@ -175,6 +180,24 @@ export class ContextSession implements AsyncDisposable {
     return await this.db.$queryRaw<Array<FileChunkSimilarity>>`
       SELECT "file_id" as "fileId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 
       FROM "ai_context_embeddings"
+      ORDER BY "distance" ASC
+      LIMIT ${topK};
+    `;
+  }
+
+  async matchWorkspace(
+    content: string,
+    topK: number = 5,
+    signal?: AbortSignal
+  ) {
+    const embedding = await this.client
+      .getEmbeddings([content], signal)
+      .then(r => r?.[0]?.embedding);
+    if (!embedding) return [];
+    return await this.db.$queryRaw<Array<DocChunkSimilarity>>`
+      SELECT "doc_id" as "docId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 
+      FROM "ai_workspace_embeddings"
+      WHERE "workspace_id" = ${this.workspaceId}
       ORDER BY "distance" ASC
       LIMIT ${topK};
     `;

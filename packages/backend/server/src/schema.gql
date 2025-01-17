@@ -42,6 +42,13 @@ enum ContextFileStatus {
   processing
 }
 
+type ContextMatchedDocChunk {
+  chunk: SafeInt!
+  content: String!
+  distance: Float
+  docId: String!
+}
+
 type ContextMatchedFileChunk {
   chunk: SafeInt!
   content: String!
@@ -559,12 +566,6 @@ input ManageUserInput {
   name: String
 }
 
-input MatchContextInput {
-  content: String!
-  contextId: String!
-  limit: SafeInt
-}
-
 type MemberNotFoundInSpaceDataType {
   spaceId: String!
 }
@@ -636,7 +637,10 @@ type Mutation {
   leaveWorkspace(sendLeaveMail: Boolean, workspaceId: String!, workspaceName: String @deprecated(reason: "no longer used")): Boolean!
 
   """remove a file from context"""
-  matchContext(options: MatchContextInput!): [ContextMatchedFileChunk!]!
+  matchContext(content: String!, contextId: String!, limit: SafeInt): [ContextMatchedFileChunk!]!
+
+  """match workspace doc"""
+  matchWorkspaceContext(content: String!, contextId: String!, limit: SafeInt): ContextMatchedDocChunk!
   publishPage(mode: PublicPageMode = Page, pageId: String!, workspaceId: String!): WorkspacePage!
 
   """queue workspace doc embedding"""

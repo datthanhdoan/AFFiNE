@@ -212,6 +212,22 @@ query listContextFiles($workspaceId: String!, $sessionId: String!, $contextId: S
 }`,
 };
 
+export const matchContextMutation = {
+  id: 'matchContextMutation' as const,
+  operationName: 'matchContext',
+  definitionName: 'matchContext',
+  containsFile: false,
+  query: `
+mutation matchContext($contextId: String!, $content: String!, $limit: SafeInt) {
+  matchContext(contextId: $contextId, content: $content, limit: $limit) {
+    fileId
+    chunk
+    content
+    distance
+  }
+}`,
+};
+
 export const removeContextFileMutation = {
   id: 'removeContextFileMutation' as const,
   operationName: 'removeContextFile',
@@ -236,6 +252,22 @@ query listContext($workspaceId: String!, $sessionId: String!) {
         id
       }
     }
+  }
+}`,
+};
+
+export const matchWorkspaceContextMutation = {
+  id: 'matchWorkspaceContextMutation' as const,
+  operationName: 'matchWorkspaceContext',
+  definitionName: 'matchWorkspaceContext',
+  containsFile: false,
+  query: `
+mutation matchWorkspaceContext($contextId: String!, $content: String!, $limit: SafeInt) {
+  matchWorkspaceContext(contextId: $contextId, content: $content, limit: $limit) {
+    docId
+    chunk
+    content
+    distance
   }
 }`,
 };
