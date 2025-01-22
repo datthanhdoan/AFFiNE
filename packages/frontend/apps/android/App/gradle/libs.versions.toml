@@ -1,15 +1,16 @@
 [versions]
-androidxActivityVersion = "1.9.3"
+androidxActivityVersion = "1.10.0"
 androidxCoreVersion = "1.15.0"
 androidxEspressoCoreVersion = "3.6.1"
 androidxFragmentVersion = "1.8.5"
 androidxJunitVersion = "1.2.1"
 androidxWebkitVersion = "1.12.1"
+browser = "1.8.0"
 cordovaAndroidVersion = "10.1.1"
 coreKtx = "1.15.0"
 coreSplashScreenVersion = "1.0.1"
 jna = "5.16.0"
-jsonVersion = "20241224"
+jsonVersion = "20250107"
 junitVersion = "4.13.2"
 kotlin = "2.1.0"
 kotlinxCoroutinesCore = "1.10.1"
@@ -23,6 +24,7 @@ apollo = "4.1.0"
 
 [libraries]
 androidx-activity = { module = "androidx.activity:activity", version.ref = "androidxActivityVersion" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
 androidx-core = { module = "androidx.core:core", version.ref = "androidxCoreVersion" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-coordinatorlayout = { module = "androidx.coordinatorlayout:coordinatorlayout", version.ref = "coordinatorLayout" }
