@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     alias libs.plugins.android.application
@@ -37,15 +38,15 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    flavorDimensions=['chanel']
+    flavorDimensions = ['chanel']
     productFlavors {
         stable {
             buildConfigField 'String', 'BASE_URL', '"https://app.affine.pro"'
-            resValue  'string', 'host', '"app.affine.pro"'
+            resValue 'string', 'host', '"app.affine.pro"'
         }
         canary {
             buildConfigField 'String', 'BASE_URL', '"https://affine.fail"'
-            resValue  'string', 'host', '"affine.fail"'
+            resValue 'string', 'host', '"affine.fail"'
         }
     }
 
@@ -99,10 +100,10 @@ cargo {
 }
 
 kotlin {
-  compilerOptions {
-    apiVersion = KotlinVersion.KOTLIN_2_0
-    jvmTarget = JvmTarget.JVM_21
-  }
+    compilerOptions {
+        apiVersion = KotlinVersion.KOTLIN_2_1
+        jvmTarget = JvmTarget.JVM_21
+    }
 }
 
 afterEvaluate {
@@ -121,7 +122,7 @@ android.applicationVariants.configureEach { variant ->
     def t = tasks.register("generate${variant.name.capitalize()}UniFFIBindings", Exec) {
         workingDir "${project.projectDir}"
         // Runs the bindings generation, note that you must have uniffi-bindgen installed and in your PATH environment variable
-        commandLine 'cargo', 'run', '--bin', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/android/arm64-v8a/libaffine_mobile_native.so", '--language', 'kotlin', '--out-dir', "${project.projectDir}/src/main/java"
+        commandLine "${System.getenv("CARGO_HOME")}/bin/cargo", 'run', '--bin', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/android/arm64-v8a/libaffine_mobile_native.so", '--language', 'kotlin', '--out-dir', "${project.projectDir}/src/main/java"
         dependsOn("cargoBuild")
     }
     variant.javaCompileProvider.get().dependsOn(t)

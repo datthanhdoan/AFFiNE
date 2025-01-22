@@ -226,7 +226,7 @@ __metadata:
     "@blocksuite/affine": "workspace:*"
     "@blocksuite/icons": "npm:2.2.2"
     "@capacitor/android": "npm:^7.0.0"
-    "@capacitor/app": "npm:^6.0.2"
+    "@capacitor/app": "npm:^7.0.0"
     "@capacitor/cli": "npm:^7.0.0"
     "@capacitor/core": "npm:^7.0.0"
     "@capgo/inappbrowser": "npm:^6.9.35"
