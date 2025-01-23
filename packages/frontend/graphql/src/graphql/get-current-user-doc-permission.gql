@@ -1,0 +1,24 @@
+query getCurrentUserDocPermission($pageId: String!, $workspaceId: String!) {
+  workspace(id: $workspaceId) {
+    pagePermission(pageId: $pageId) {
+      id
+      public
+      role
+      permissions {
+          Doc_Read
+          Doc_Copy
+          Doc_Properties_Read
+          Doc_Users_Read
+          Doc_Duplicate
+          Doc_Trash
+          Doc_Restore
+          Doc_Delete
+          Doc_Properties_Update
+          Doc_Update
+          Doc_Publish
+          Doc_Users_Manage
+          Doc_TransferOwner
+      }
+    }
+  }
+}

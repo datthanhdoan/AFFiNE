@@ -1,0 +1,18 @@
+query getPageGrantedUsersList($pageGrantedUsersInput: PageGrantedUsersInput!, $pageId: String!, $workspaceId: String!) {
+  workspace(id: $workspaceId) {
+    pageGrantedUsersList(pageGrantedUsersInput: $pageGrantedUsersInput, pageId: $pageId) {
+      totalCount
+      edges {
+        user {
+          role
+          user {
+            id
+            name
+            email
+            avatarUrl
+          }
+        }
+      }
+    }
+  }
+}

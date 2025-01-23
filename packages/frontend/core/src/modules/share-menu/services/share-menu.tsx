@@ -1,6 +1,7 @@
+import { DocRole } from '@affine/graphql';
 import { LiveData, Service } from '@toeverything/infra';
 
-import type { Member } from '../../permissions';
+import type { GrantedUser } from '../../permissions';
 
 export enum ShareMenuTab {
   Share = 'share',
@@ -17,7 +18,8 @@ export class ShareMenuService extends Service {
   }
 
   query$ = new LiveData<string>('');
-  selectedMembers$ = new LiveData<Member[]>([]);
+  selectedMembers$ = new LiveData<GrantedUser[]>([]);
+  inviteDocRoleType$ = new LiveData<DocRole>(DocRole.Manager);
 
   switchTab(tab: ShareMenuTab) {
     this.currentTab$.next(tab);
@@ -27,20 +29,26 @@ export class ShareMenuService extends Service {
     this.query$.next(query);
   }
 
-  addToSelectedMembers(member: Member) {
+  addToSelectedMembers(member: GrantedUser) {
     // filter out duplicates
-    if (!this.selectedMembers$.value.some(m => m.id === member.id)) {
+    if (!this.selectedMembers$.value.some(m => m.user.id === member.user.id)) {
       this.selectedMembers$.next([...this.selectedMembers$.value, member]);
     }
   }
 
   removeFromSelectedMembers(memberId: string) {
     this.selectedMembers$.next(
-      this.selectedMembers$.value.filter(member => member.id !== memberId)
+      this.selectedMembers$.value.filter(member => member.user.id !== memberId)
     );
   }
 
-  clearSelectedMembers() {
+  setInviteDocRoleType(role: DocRole) {
+    this.inviteDocRoleType$.next(role);
+  }
+
+  clear() {
     this.selectedMembers$.next([]);
+    this.query$.next('');
+    this.inviteDocRoleType$.next(DocRole.Manager);
   }
 }

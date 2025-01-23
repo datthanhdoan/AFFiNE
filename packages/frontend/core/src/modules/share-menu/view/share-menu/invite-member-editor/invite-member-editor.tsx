@@ -7,9 +7,14 @@ import {
   RowInput,
   Scrollable,
 } from '@affine/component';
+import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { Member } from '@affine/core/modules/permissions';
-import { Permission, WorkspaceMemberStatus } from '@affine/graphql';
+import {
+  DocGrantedUsersService,
+  type GrantedUser,
+  WorkspaceMembersService,
+} from '@affine/core/modules/permissions';
+import { DocRole } from '@affine/graphql';
 import { useI18n } from '@affine/i18n';
 import { ArrowLeftBigIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
@@ -22,46 +27,13 @@ import * as styles from './invite-member-editor.css';
 import { MemberItem } from './member-item';
 import { SelectedMemberItem } from './selected-member-item';
 
-const mockMembers: Member[] = [
-  {
-    id: '2',
-    name: 'Member 1',
-    avatarUrl: '',
-    email: 'fakeemail@gamicl.com',
-    permission: Permission.Owner,
-    inviteId: '',
-    emailVerified: null,
-    status: WorkspaceMemberStatus.Accepted,
-  },
-  {
-    id: '3',
-    name: 'Member 2',
-    avatarUrl: '',
-    email: 'testloasnodknaksldnalkndlkasnd@gamil.com',
-    permission: Permission.Admin,
-    inviteId: '',
-    emailVerified: null,
-    status: WorkspaceMemberStatus.Accepted,
-  },
-  {
-    id: '4',
-    name: 'loansodinsaodjsalkjdlkasnlkdnaslkdnl kasndlkaskldaslkdnalskndlkasn',
-    avatarUrl: '',
-    email: null,
-    permission: Permission.Read,
-    inviteId: '',
-    emailVerified: null,
-    status: WorkspaceMemberStatus.Accepted,
-  },
-];
-
-const getRoleName = (role: Permission, t: ReturnType<typeof useI18n>) => {
+const getRoleName = (role: DocRole, t: ReturnType<typeof useI18n>) => {
   switch (role) {
-    case Permission.Admin:
+    case DocRole.Manager:
       return t['com.affine.share-menu.option.permission.can-manage']();
-    case Permission.Write:
+    case DocRole.Editor:
       return t['com.affine.share-menu.option.permission.can-edit']();
-    case Permission.Read:
+    case DocRole.Reader:
       return t['com.affine.share-menu.option.permission.can-read']();
     default:
       return '';
@@ -79,12 +51,43 @@ export const InviteMemberEditor = ({
   const t = useI18n();
   const shareMenuService = useService(ShareMenuService);
   const selectedMembers = useLiveData(shareMenuService.selectedMembers$);
+  const docGrantedUsersService = useService(DocGrantedUsersService);
+  const inviteDocRoleType = useLiveData(shareMenuService.inviteDocRoleType$);
+
+  const membersService = useService(WorkspaceMembersService);
+  const pageMembers = useLiveData(membersService.members.pageMembers$);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [focused, setFocused] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [shouldSendEmail, setShouldSendEmail] = useState(false);
   const workspaceDialogService = useService(WorkspaceDialogService);
+
+  const onInvite = useAsyncCallback(async () => {
+    const selectedMemberIds = selectedMembers.map(member => member.user.id);
+    await docGrantedUsersService.grantUsersRole(
+      selectedMemberIds,
+      inviteDocRoleType
+    );
+  }, [docGrantedUsersService, inviteDocRoleType, selectedMembers]);
+
+  // TODO(@JimmFly): Implement the search logic
+  const mockGrantedUsers: GrantedUser[] | undefined = useMemo(() => {
+    return pageMembers?.map(member => ({
+      user: {
+        id: member.id,
+        name: member.name || '',
+        email: member.email || '',
+        avatarUrl: member.avatarUrl,
+      },
+      role: DocRole.Editor,
+    }));
+  }, [pageMembers]);
+
+  const onCancel = useCallback(() => {
+    shareMenuService.clear();
+    shareMenuService.switchTab(ShareMenuTab.Share);
+  }, [shareMenuService]);
 
   const onInputChange = useCallback((value: string) => {
     setInputValue(value);
@@ -136,17 +139,17 @@ export const InviteMemberEditor = ({
           })}
         >
           <div className={styles.inlineMembersContainer}>
-            {selectedMembers.map((member, idx) => {
-              if (!member) {
+            {selectedMembers.map((grantedUser, idx) => {
+              if (!grantedUser) {
                 return null;
               }
-              const onRemoved = () => handleRemoved(member.id);
+              const onRemoved = () => handleRemoved(grantedUser.user.id);
               return (
                 <SelectedMemberItem
-                  key={member.id}
+                  key={grantedUser.user.id}
                   idx={idx}
                   onRemoved={onRemoved}
-                  member={member}
+                  grantedUser={grantedUser}
                 />
               );
             })}
@@ -178,7 +181,7 @@ export const InviteMemberEditor = ({
               {t['com.affine.share-menu.invite-editor.sent-email']()}
             </div>
           ) : (
-            <Result result={mockMembers} />
+            <Result result={mockGrantedUsers} />
           )}
         </div>
       </div>
@@ -190,11 +193,14 @@ export const InviteMemberEditor = ({
           {t['com.affine.share-menu.invite-editor.manage-members']()}
         </span>
         <div className={styles.buttonsContainer}>
-          <Button className={styles.button}>{t['Cancel']()}</Button>
+          <Button className={styles.button} onClick={onCancel}>
+            {t['Cancel']()}
+          </Button>
           <Button
             className={styles.button}
             variant="primary"
             disabled={!selectedMembers.length}
+            onClick={onInvite}
           >
             {t['com.affine.share-menu.invite-editor.invite']()}
           </Button>
@@ -204,11 +210,10 @@ export const InviteMemberEditor = ({
   );
 };
 
-// TODO(@JimmFly): handle overflow
-const Result = ({ result }: { result: Member[] }) => {
+const Result = ({ result }: { result?: GrantedUser[] }) => {
   const shareMenuService = useService(ShareMenuService);
   const t = useI18n();
-  if (result.length === 0) {
+  if (!result || result.length === 0) {
     return (
       <div className={styles.noFound}>
         {t['com.affine.share-menu.invite-editor.no-found']()}
@@ -219,13 +224,13 @@ const Result = ({ result }: { result: Member[] }) => {
   return (
     <Scrollable.Root>
       <Scrollable.Viewport className={styles.result}>
-        {result.map(member => {
+        {result.map(grantedUser => {
           const handleSelect = () => {
-            shareMenuService.addToSelectedMembers(member);
+            shareMenuService.addToSelectedMembers(grantedUser);
           };
           return (
-            <div onClick={handleSelect} key={member.id}>
-              <MemberItem member={member} />
+            <div onClick={handleSelect} key={grantedUser.user.id}>
+              <MemberItem grantedUser={grantedUser} />
             </div>
           );
         })}
@@ -243,14 +248,21 @@ const RoleSelector = ({
   hittingPaywall: boolean;
 }) => {
   const t = useI18n();
-  const [role, setRole] = useState(Permission.Admin);
-  const onRoleChange = useCallback((role: Permission) => {
-    setRole(role);
-  }, []);
-  const currentRoleName = useMemo(() => getRoleName(role, t), [role, t]);
+  const shareMenuService = useService(ShareMenuService);
+  const inviteDocRoleType = useLiveData(shareMenuService.inviteDocRoleType$);
+  const onRoleChange = useCallback(
+    (role: DocRole) => {
+      shareMenuService.setInviteDocRoleType(role);
+    },
+    [shareMenuService]
+  );
+  const currentRoleName = useMemo(
+    () => getRoleName(inviteDocRoleType, t),
+    [inviteDocRoleType, t]
+  );
 
   const changeToAdmin = useCallback(
-    () => onRoleChange(Permission.Admin),
+    () => onRoleChange(DocRole.Manager),
     [onRoleChange]
   );
   const changeToWrite = useCallback(() => {
@@ -258,14 +270,14 @@ const RoleSelector = ({
       openPaywallModal();
       return;
     }
-    onRoleChange(Permission.Write);
+    onRoleChange(DocRole.Editor);
   }, [hittingPaywall, onRoleChange, openPaywallModal]);
   const changeToRead = useCallback(() => {
     if (hittingPaywall) {
       openPaywallModal();
       return;
     }
-    onRoleChange(Permission.Read);
+    onRoleChange(DocRole.Reader);
   }, [hittingPaywall, onRoleChange, openPaywallModal]);
   return (
     <div className={styles.roleSelectorContainer}>
@@ -277,13 +289,13 @@ const RoleSelector = ({
           <>
             <MenuItem
               onSelect={changeToAdmin}
-              selected={role === Permission.Admin}
+              selected={inviteDocRoleType === DocRole.Manager}
             >
               {t['com.affine.share-menu.option.permission.can-manage']()}
             </MenuItem>
             <MenuItem
               onSelect={changeToWrite}
-              selected={role === Permission.Write}
+              selected={inviteDocRoleType === DocRole.Editor}
             >
               <div className={styles.planTagContainer}>
                 {t['com.affine.share-menu.option.permission.can-edit']()}
@@ -292,7 +304,7 @@ const RoleSelector = ({
             </MenuItem>
             <MenuItem
               onSelect={changeToRead}
-              selected={role === Permission.Read}
+              selected={inviteDocRoleType === DocRole.Reader}
             >
               <div className={styles.planTagContainer}>
                 {t['com.affine.share-menu.option.permission.can-read']()}

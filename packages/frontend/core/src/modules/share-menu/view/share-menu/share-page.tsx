@@ -1,9 +1,7 @@
 import { Skeleton } from '@affine/component';
 import { Button } from '@affine/component/ui/button';
 import { ServerService } from '@affine/core/modules/cloud';
-import { type Member } from '@affine/core/modules/permissions';
 import { ShareInfoService } from '@affine/core/modules/share-doc';
-import { Permission, WorkspaceMemberStatus } from '@affine/graphql';
 import { useI18n } from '@affine/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { Suspense, useEffect } from 'react';
@@ -78,56 +76,12 @@ export const AFFiNESharePage = (props: ShareMenuProps) => {
       </>
     );
   }
-  // TODO(@JimmFly): remove mock data
-  const mockOwner: Member = {
-    id: '1',
-    name: 'Owner',
-    avatarUrl: '',
-    email: null,
-    permission: Permission.Admin,
-    inviteId: '',
-    emailVerified: null,
-    status: WorkspaceMemberStatus.Accepted,
-  };
-
-  const mockMembers: Member[] = [
-    {
-      id: '2',
-      name: 'Member 1',
-      avatarUrl: '',
-      email: null,
-      permission: Permission.Admin,
-      inviteId: '',
-      emailVerified: null,
-      status: WorkspaceMemberStatus.Accepted,
-    },
-    {
-      id: '3',
-      name: 'Member 2',
-      avatarUrl: '',
-      email: null,
-      permission: Permission.Admin,
-      inviteId: '',
-      emailVerified: null,
-      status: WorkspaceMemberStatus.Accepted,
-    },
-    {
-      id: '4',
-      name: 'Member 3',
-      avatarUrl: '',
-      email: null,
-      permission: Permission.Admin,
-      inviteId: '',
-      emailVerified: null,
-      status: WorkspaceMemberStatus.Accepted,
-    },
-  ];
 
   return (
     <div className={styles.content}>
       <div className={styles.columnContainerStyle}>
         <InviteInput />
-        <MembersRow docOwner={mockOwner} members={mockMembers} />
+        <MembersRow />
         <div className={styles.generalAccessStyle}>
           {t['com.affine.share-menu.generalAccess']()}
         </div>

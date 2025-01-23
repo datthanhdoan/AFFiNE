@@ -1,7 +1,7 @@
 import { IconButton, MobileMenu } from '@affine/component';
-import { SharePage } from '@affine/core/components/affine/share-page-modal/share-menu/share-page';
 import { useEnableCloud } from '@affine/core/components/hooks/affine/use-enable-cloud';
 import { DocService } from '@affine/core/modules/doc';
+import { SharePage } from '@affine/core/modules/share-menu/view/share-menu/share-page';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import { ShareiOsIcon } from '@blocksuite/icons/rc';
 import { useServices } from '@toeverything/infra';

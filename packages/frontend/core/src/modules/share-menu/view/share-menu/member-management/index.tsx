@@ -1,45 +1,53 @@
 import { Avatar, Tooltip } from '@affine/component';
-import type { Member } from '@affine/core/modules/permissions';
+import { DocGrantedUsersService } from '@affine/core/modules/permissions';
 import { useI18n } from '@affine/i18n';
 import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
-import { useService } from '@toeverything/infra';
+import { useLiveData, useService } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import clsx from 'clsx';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { ShareMenuService, ShareMenuTab } from '../../../services/share-menu';
 import * as styles from './styles.css';
 
 export { MemberManagement } from './member-management';
 
-export const MembersRow = ({
-  docOwner,
-  members,
-}: {
-  docOwner: Member;
-  members: Member[];
-}) => {
+export const MembersRow = () => {
   const t = useI18n();
   const shareMenuService = useService(ShareMenuService);
+  const docGrantedUsersService = useService(DocGrantedUsersService);
+
+  const grantedUserList = useLiveData(
+    docGrantedUsersService.docGrantedUsers.docGrantedUsers$
+  );
+  const grantedUserCount = useLiveData(
+    docGrantedUsersService.docGrantedUsers.grantedUserCount$
+  );
+  const docOwner = useLiveData(
+    docGrantedUsersService.docGrantedUsers.docOwner$
+  );
+
   const handleClick = useCallback(() => {
     shareMenuService.switchTab(ShareMenuTab.Members);
   }, [shareMenuService]);
 
   const topThreeMembers = useMemo(
     () =>
-      members.slice(0, Math.min(3, members.length)).map(member => ({
-        name: member.name || member.email || member.id,
-        avatarUrl: member.avatarUrl,
-        id: member.id,
-      })),
-    [members]
+      grantedUserList
+        ?.slice(0, Math.min(3, grantedUserList.length))
+        .map(grantedUser => ({
+          name: grantedUser.user.name,
+          avatarUrl: grantedUser.user.avatarUrl,
+          id: grantedUser.user.id,
+        })),
+    [grantedUserList]
   );
 
   const description = useMemo(() => {
-    if (members.length <= 1) {
+    if (!grantedUserCount || !topThreeMembers) {
       return '';
     }
-    switch (members.length) {
+    switch (grantedUserCount) {
       case 2:
         return t['com.affine.share-menu.member-management.member-count-2']({
           member1: topThreeMembers[0].name,
@@ -55,12 +63,16 @@ export const MembersRow = ({
         return t['com.affine.share-menu.member-management.member-count-more']({
           member1: topThreeMembers[0].name,
           member2: topThreeMembers[1].name,
-          memberCount: (members.length - 2).toString(),
+          memberCount: (grantedUserCount - 2).toString(),
         });
     }
-  }, [members.length, t, topThreeMembers]);
+  }, [grantedUserCount, t, topThreeMembers]);
 
-  if (members.length > 1) {
+  useEffect(() => {
+    docGrantedUsersService.docGrantedUsers.revalidate();
+  }, [docGrantedUsersService]);
+
+  if (grantedUserCount && topThreeMembers && grantedUserCount > 1) {
     return (
       <Tooltip content={description}>
         <div
@@ -96,11 +108,11 @@ export const MembersRow = ({
     <div className={styles.rowContainerStyle}>
       <div className={styles.memberContainerStyle}>
         <Avatar
-          url={docOwner.avatarUrl || ''}
-          name={docOwner.name || ''}
+          url={docOwner?.user.avatarUrl || ''}
+          name={docOwner?.user.name}
           size={24}
         />
-        <span>{docOwner.name}</span>
+        <span>{docOwner?.user.name}</span>
       </div>
       <div className={styles.OwnerStyle}>{t['Owner']()}</div>
     </div>

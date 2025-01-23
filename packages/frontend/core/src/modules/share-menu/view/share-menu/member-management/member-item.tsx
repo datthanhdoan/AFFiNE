@@ -6,9 +6,15 @@ import {
   MenuTrigger,
   Tooltip,
 } from '@affine/component';
-import type { Member } from '@affine/core/modules/permissions';
-import { Permission } from '@affine/graphql';
+import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+import {
+  DocGrantedUsersService,
+  DocPermissionService,
+  type GrantedUser,
+} from '@affine/core/modules/permissions';
+import { DocRole } from '@affine/graphql';
 import { useI18n } from '@affine/i18n';
+import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import { useMemo } from 'react';
 
@@ -18,68 +24,71 @@ import * as styles from './member-item.css';
 export const MemberItem = ({
   openPaywallModal,
   hittingPaywall,
-  member,
+  grantedUser,
 }: {
-  member: Member;
+  grantedUser: GrantedUser;
   hittingPaywall: boolean;
   openPaywallModal: () => void;
 }) => {
-  const isOwner = true;
-  const isManager = false;
+  const docPermissionService = useService(DocPermissionService);
+  const canManage = useLiveData(docPermissionService.canManage$);
+
+  const user = grantedUser.user;
 
   const role = useMemo(() => {
-    switch (member.permission) {
-      case Permission.Owner:
+    switch (grantedUser.role) {
+      case DocRole.Owner:
         return 'Owner';
-      case Permission.Admin:
+      case DocRole.Manager:
         return 'Can manage';
-      case Permission.Write:
+      case DocRole.Editor:
         return 'Can edit';
-      case Permission.Read:
+      case DocRole.Reader:
         return 'Can read';
       default:
         return '';
     }
-  }, [member.permission]);
+  }, [grantedUser.role]);
 
   return (
     <div className={styles.memberItemStyle}>
       <div className={styles.memberContainerStyle}>
         <Avatar
-          key={member.id}
-          url={member.avatarUrl || ''}
-          name={member.name || ''}
+          key={user.id}
+          url={user.avatarUrl || ''}
+          name={user.name}
           size={36}
         />
         <div className={styles.memberInfoStyle}>
           <Tooltip
-            content={member.name}
+            content={user.name}
             rootOptions={{ delayDuration: 1000 }}
             options={{
               className: styles.tooltipContentStyle,
             }}
           >
-            <div className={styles.memberNameStyle}>{member.name}</div>
+            <div className={styles.memberNameStyle}>{user.name}</div>
           </Tooltip>
           <Tooltip
-            content={member.email}
+            content={user.email}
             rootOptions={{ delayDuration: 1000 }}
             options={{
               className: styles.tooltipContentStyle,
             }}
           >
-            <div className={styles.memberEmailStyle}>{member.email}</div>
+            <div className={styles.memberEmailStyle}>{user.email}</div>
           </Tooltip>
         </div>
       </div>
 
-      {(!isOwner && !isManager) || member.permission === Permission.Owner ? (
+      {!canManage || grantedUser.role === DocRole.Owner ? (
         <div className={clsx(styles.memberRoleStyle, 'disable')}>{role}</div>
       ) : (
         <Menu
           items={
             <Options
-              memberPermission={member.permission}
+              userId={user.id}
+              memberRole={grantedUser.role}
               hittingPaywall={hittingPaywall}
               openPaywallModal={openPaywallModal}
             />
@@ -103,52 +112,80 @@ export const MemberItem = ({
   );
 };
 
-// TODO(@JimmFly): impl Options component
 const Options = ({
   openPaywallModal,
   hittingPaywall,
-  memberPermission,
+  memberRole,
+  userId,
 }: {
-  memberPermission: Permission;
+  userId: string;
+  memberRole: DocRole;
   hittingPaywall: boolean;
   openPaywallModal: () => void;
 }) => {
   const t = useI18n();
-  const isOwner = true;
-  const isManager = false;
-  const isOwnerOrManager = isOwner || isManager;
+  const docPermissionService = useService(DocPermissionService);
+  const docGrantedUsersService = useService(DocGrantedUsersService);
+  const isOwner = useLiveData(docPermissionService.isOwner$);
+  const canManage = useLiveData(docPermissionService.canManage$);
+
+  const changeToManager = useAsyncCallback(async () => {
+    await docGrantedUsersService.updateUserRole(userId, DocRole.Manager);
+    docGrantedUsersService.docGrantedUsers.revalidate();
+  }, [docGrantedUsersService, userId]);
+
+  const changeToEditor = useAsyncCallback(async () => {
+    if (hittingPaywall) {
+      openPaywallModal();
+      return;
+    }
+    await docGrantedUsersService.updateUserRole(userId, DocRole.Editor);
+    docGrantedUsersService.docGrantedUsers.revalidate();
+  }, [docGrantedUsersService, hittingPaywall, openPaywallModal, userId]);
+
+  const changeToReader = useAsyncCallback(async () => {
+    if (hittingPaywall) {
+      openPaywallModal();
+      return;
+    }
+    await docGrantedUsersService.updateUserRole(userId, DocRole.Reader);
+    docGrantedUsersService.docGrantedUsers.revalidate();
+  }, [docGrantedUsersService, hittingPaywall, openPaywallModal, userId]);
+
+  const changeToOwner = useAsyncCallback(async () => {
+    await docGrantedUsersService.updateUserRole(userId, DocRole.Owner);
+    docGrantedUsersService.docGrantedUsers.revalidate();
+  }, [docGrantedUsersService, userId]);
+
+  const removeMember = useAsyncCallback(async () => {
+    await docGrantedUsersService.revokeUsersRole([userId]);
+    docGrantedUsersService.docGrantedUsers.revalidate();
+  }, [docGrantedUsersService, userId]);
+
   const operationButtonInfo = useMemo(() => {
     return [
       {
         label: t['com.affine.share-menu.option.permission.can-manage'](),
-        onClick: () => {},
-        permission: Permission.Admin,
-        show: isOwnerOrManager,
+        onClick: changeToManager,
+        role: DocRole.Manager,
+        show: canManage,
       },
       {
         label: t['com.affine.share-menu.option.permission.can-edit'](),
-        onClick: () => {
-          if (hittingPaywall) {
-            openPaywallModal();
-          }
-        },
-        permission: Permission.Write,
-        show: isOwnerOrManager,
+        onClick: changeToEditor,
+        role: DocRole.Editor,
+        show: canManage,
         showPlanTag: true,
       },
       {
         label: t['com.affine.share-menu.option.permission.can-read'](),
-        onClick: () => {
-          if (hittingPaywall) {
-            openPaywallModal();
-          }
-        },
-        permission: Permission.Read,
-        show: isOwnerOrManager,
+        onClick: changeToReader,
+        role: DocRole.Reader,
+        show: canManage,
         showPlanTag: true,
       },
     ];
-  }, [hittingPaywall, isOwnerOrManager, openPaywallModal, t]);
+  }, [changeToEditor, changeToManager, changeToReader, canManage, t]);
 
   return (
     <>
@@ -157,7 +194,7 @@ const Options = ({
           <MenuItem
             key={item.label}
             onSelect={item.onClick}
-            selected={memberPermission === item.permission}
+            selected={memberRole === item.role}
           >
             <div className={styles.planTagContainer}>
               {item.label} {item.showPlanTag ? <PlanTag /> : null}
@@ -166,14 +203,18 @@ const Options = ({
         ) : null
       )}
       {isOwner ? (
-        <MenuItem onSelect={() => {}}>
+        <MenuItem onSelect={changeToOwner}>
           {t['com.affine.share-menu.member-management.set-as-owner']()}
         </MenuItem>
       ) : null}
-      {isOwnerOrManager ? (
+      {canManage ? (
         <>
           <MenuSeparator />
-          <MenuItem onSelect={() => {}} type="danger" className={styles.remove}>
+          <MenuItem
+            onSelect={removeMember}
+            type="danger"
+            className={styles.remove}
+          >
             {t['com.affine.share-menu.member-management.remove']()}
           </MenuItem>
         </>

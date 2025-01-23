@@ -1,26 +1,27 @@
 import { Avatar, Tooltip } from '@affine/component';
-import type { Member } from '@affine/core/modules/permissions';
-import { Permission } from '@affine/graphql';
+import type { GrantedUser } from '@affine/core/modules/permissions';
+import { DocRole } from '@affine/graphql';
 import clsx from 'clsx';
 import { useMemo } from 'react';
 
 import * as styles from './member-item.css';
 
-export const MemberItem = ({ member }: { member: Member }) => {
+export const MemberItem = ({ grantedUser }: { grantedUser: GrantedUser }) => {
+  const member = grantedUser.user;
   const role = useMemo(() => {
-    switch (member.permission) {
-      case Permission.Owner:
+    switch (grantedUser.role) {
+      case DocRole.Owner:
         return 'Owner';
-      case Permission.Admin:
+      case DocRole.Manager:
         return 'Can manage';
-      case Permission.Write:
+      case DocRole.Editor:
         return 'Can edit';
-      case Permission.Read:
+      case DocRole.Reader:
         return 'Can read';
       default:
         return '';
     }
-  }, [member.permission]);
+  }, [grantedUser.role]);
 
   return (
     <div className={styles.memberItemStyle}>

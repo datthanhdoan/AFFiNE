@@ -22,7 +22,7 @@ export const SharePageButton = ({ workspace, page }: SharePageModalProps) => {
     (open: boolean) => {
       if (open) {
         track.$.sharePanel.$.open();
-        shareMenuService.setQuery('');
+        shareMenuService.clear();
         shareMenuService.switchTab(ShareMenuTab.Share);
       }
     },

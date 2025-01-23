@@ -1,0 +1,3 @@
+mutation revokeDocUserRoles($docId: String!, $userIds: [String!]!) {
+  revokeDocUserRoles(docId: $docId, userIds:$userIds )
+}

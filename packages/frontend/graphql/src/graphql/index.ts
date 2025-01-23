@@ -358,6 +358,38 @@ query getCopilotSessions($workspaceId: String!) {
 }`,
 };
 
+export const getCurrentUserDocPermissionQuery = {
+  id: 'getCurrentUserDocPermissionQuery' as const,
+  operationName: 'getCurrentUserDocPermission',
+  definitionName: 'workspace',
+  containsFile: false,
+  query: `
+query getCurrentUserDocPermission($pageId: String!, $workspaceId: String!) {
+  workspace(id: $workspaceId) {
+    pagePermission(pageId: $pageId) {
+      id
+      public
+      role
+      permissions {
+        Doc_Read
+        Doc_Copy
+        Doc_Properties_Read
+        Doc_Users_Read
+        Doc_Duplicate
+        Doc_Trash
+        Doc_Restore
+        Doc_Delete
+        Doc_Properties_Update
+        Doc_Update
+        Doc_Publish
+        Doc_Users_Manage
+        Doc_TransferOwner
+      }
+    }
+  }
+}`,
+};
+
 export const getCurrentUserFeaturesQuery = {
   id: 'getCurrentUserFeaturesQuery' as const,
   operationName: 'getCurrentUserFeatures',
@@ -485,6 +517,35 @@ export const oauthProvidersQuery = {
 query oauthProviders {
   serverConfig {
     oauthProviders
+  }
+}`,
+};
+
+export const getPageGrantedUsersListQuery = {
+  id: 'getPageGrantedUsersListQuery' as const,
+  operationName: 'getPageGrantedUsersList',
+  definitionName: 'workspace',
+  containsFile: false,
+  query: `
+query getPageGrantedUsersList($pageGrantedUsersInput: PageGrantedUsersInput!, $pageId: String!, $workspaceId: String!) {
+  workspace(id: $workspaceId) {
+    pageGrantedUsersList(
+      pageGrantedUsersInput: $pageGrantedUsersInput
+      pageId: $pageId
+    ) {
+      totalCount
+      edges {
+        user {
+          role
+          user {
+            id
+            name
+            email
+            avatarUrl
+          }
+        }
+      }
+    }
   }
 }`,
 };
@@ -777,6 +838,17 @@ query getWorkspaces {
 }`,
 };
 
+export const grantDocUserRolesMutation = {
+  id: 'grantDocUserRolesMutation' as const,
+  operationName: 'grantDocUserRoles',
+  definitionName: 'grantDocUserRoles',
+  containsFile: false,
+  query: `
+mutation grantDocUserRoles($input: GrantDocUserRolesInput!) {
+  grantDocUserRoles(input: $input)
+}`,
+};
+
 export const listHistoryQuery = {
   id: 'listHistoryQuery' as const,
   operationName: 'listHistory',
@@ -966,6 +1038,17 @@ mutation resumeSubscription($plan: SubscriptionPlan = Pro, $workspaceId: String)
 }`,
 };
 
+export const revokeDocUserRolesMutation = {
+  id: 'revokeDocUserRolesMutation' as const,
+  operationName: 'revokeDocUserRoles',
+  definitionName: 'revokeDocUserRoles',
+  containsFile: false,
+  query: `
+mutation revokeDocUserRoles($docId: String!, $userIds: [String!]!) {
+  revokeDocUserRoles(docId: $docId, userIds: $userIds)
+}`,
+};
+
 export const revokeMemberPermissionMutation = {
   id: 'revokeMemberPermissionMutation' as const,
   operationName: 'revokeMemberPermission',
@@ -1140,6 +1223,17 @@ export const updateCopilotSessionMutation = {
   query: `
 mutation updateCopilotSession($options: UpdateChatSessionInput!) {
   updateCopilotSession(options: $options)
+}`,
+};
+
+export const updateDocUserRoleMutation = {
+  id: 'updateDocUserRoleMutation' as const,
+  operationName: 'updateDocUserRole',
+  definitionName: 'updateDocUserRole',
+  containsFile: false,
+  query: `
+mutation updateDocUserRole($docId: String!, $role: DocRole!, $userId: String!) {
+  updateDocUserRole(docId: $docId, role: $role, userId: $userId)
 }`,
 };
 

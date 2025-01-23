@@ -1,0 +1,3 @@
+mutation updateDocUserRole($docId: String!, $role: DocRole!, $userId: String!) {
+  updateDocUserRole(docId: $docId, role:$role, userId:$userId )
+}
