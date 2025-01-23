@@ -243,7 +243,7 @@ jobs:
         with:
           serviceAccountJson: ${{ steps.auth.outputs.credentials_file_path }}
           packageName: app.affine.pro
-          releaseFiles: packages/frontend/apps/android/App/app/build/outputs/bundle/${{ env.BUILD_TYPE }}Release/app-$${{ env.BUILD_TYPE }}-release-signed.aab
+          releaseFiles: packages/frontend/apps/android/App/app/build/outputs/bundle/${{ env.BUILD_TYPE }}Release/app-${{ env.BUILD_TYPE }}-release-signed.aab
           track: internal
           status: draft
           existingEditId: ${{ steps.bump.outputs.EDIT_ID }}
