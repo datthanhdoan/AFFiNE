@@ -10,11 +10,11 @@ import {
   configureLocalStorageStateStorageImpls,
   NbstoreProvider,
 } from '@affine/core/modules/storage';
+import { PopupWindowProvider } from '@affine/core/modules/url';
+import { ClientSchemeProvider } from '@affine/core/modules/url/providers/client-schema';
 import { configureBrowserWorkbenchModule } from '@affine/core/modules/workbench';
 import { configureBrowserWorkspaceFlavours } from '@affine/core/modules/workspace-engine';
 import { WorkerClient } from '@affine/nbstore/worker/client';
-import { PopupWindowProvider } from '@affine/core/modules/url';
-import { ClientSchemeProvider } from '@affine/core/modules/url/providers/client-schema';
 import { App as CapacitorApp } from '@capacitor/app';
 import { InAppBrowser } from '@capgo/inappbrowser';
 import { Framework, FrameworkRoot, getCurrentStore } from '@toeverything/infra';
