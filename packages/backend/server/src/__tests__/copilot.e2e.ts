@@ -784,7 +784,7 @@ test.only('should be able to manage context', async t => {
       sessionId
     );
 
-    const fileId = await addContextFile(
+    const [{ id: fileId }] = await addContextFile(
       app,
       token,
       contextId,
@@ -792,8 +792,12 @@ test.only('should be able to manage context', async t => {
       'sample.pdf',
       buffer
     );
-    const [addedDoc] =
-      (await addContextDoc(app, token, contextId, randomUUID())) || [];
+    const [, { id: docId }] = await addContextDoc(
+      app,
+      token,
+      contextId,
+      randomUUID()
+    );
 
     const { files, docs } =
       (await listContextFiles(app, token, workspaceId, sessionId, contextId)) ||
@@ -806,7 +810,7 @@ test.only('should be able to manage context', async t => {
     t.is(file.name, 'sample.pdf', 'should list file name');
     t.is(file.chunk_size, 3, 'should split file into chunks');
     const [doc] = docs!;
-    t.is(doc.id, addedDoc.id, 'should list doc');
+    t.is(doc.id, docId, 'should list doc');
 
     const result = (await matchContext(app, token, contextId, 'test', 2))!;
     t.is(result.length, 2, 'should match context');

@@ -102,6 +102,15 @@ type CopilotContextFile {
   status: ContextFileStatus!
 }
 
+type CopilotContextListItem {
+  blobId: String
+  chunk_size: SafeInt
+  createdAt: SafeInt!
+  id: ID!
+  name: String
+  status: ContextFileStatus
+}
+
 type CopilotFailedToMatchContextDataType {
   content: String!
   contextId: String!
@@ -587,10 +596,10 @@ type Mutation {
   activateLicense(license: String!, workspaceId: String!): License!
 
   """add a doc to context"""
-  addContextDoc(options: AddContextDocInput!): [CopilotContextDoc!]!
+  addContextDoc(options: AddContextDocInput!): [CopilotContextListItem!]!
 
   """add a file to context"""
-  addContextFile(content: Upload!, options: AddContextFileInput!): String!
+  addContextFile(content: Upload!, options: AddContextFileInput!): [CopilotContextListItem!]!
   addWorkspaceFeature(feature: FeatureType!, workspaceId: String!): Int!
   approveMember(userId: String!, workspaceId: String!): String!
   cancelSubscription(idempotencyKey: String @deprecated(reason: "use header `Idempotency-Key`"), plan: SubscriptionPlan = Pro, workspaceId: String): SubscriptionType!

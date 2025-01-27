@@ -13,6 +13,7 @@ import {
   ContextDoc,
   ContextFile,
   ContextFileStatus,
+  ContextList,
   DocChunkSimilarity,
   Embedding,
   EmbeddingClient,
@@ -41,6 +42,130 @@ export class ContextSession implements AsyncDisposable {
 
   listFiles() {
     return this.config.files.map(f => ({ ...f }));
+  }
+
+  get sortedList(): ContextList {
+    const { docs, files } = this.config;
+    return [...docs, ...files].toSorted(
+      (a, b) => a.createdAt - b.createdAt
+    ) as ContextList;
+  }
+
+  private readStream(
+    readable: Readable,
+    maxSize = 50 * OneMB
+  ): Promise<Buffer<ArrayBuffer>> {
+    return new Promise<Buffer<ArrayBuffer>>((resolve, reject) => {
+      const chunks: Uint8Array[] = [];
+      let totalSize = 0;
+
+      readable.on('data', chunk => {
+        totalSize += chunk.length;
+        if (totalSize > maxSize) {
+          reject(new BlobQuotaExceeded());
+          readable.destroy(new BlobQuotaExceeded());
+          return;
+        }
+        chunks.push(chunk);
+      });
+
+      readable.on('end', () => {
+        resolve(Buffer.concat(chunks, totalSize));
+      });
+
+      readable.on('error', err => {
+        reject(err);
+      });
+    });
+  }
+
+  async addDocRecord(docId: string): Promise<ContextList> {
+    if (!this.config.docs.some(f => f.id === docId)) {
+      this.config.docs.push({ id: docId, createdAt: Date.now() });
+      await this.save();
+    }
+    return this.sortedList;
+  }
+
+  async removeDocRecord(docId: string): Promise<boolean> {
+    const index = this.config.docs.findIndex(f => f.id === docId);
+    if (index >= 0) {
+      this.config.docs.splice(index, 1);
+      await this.save();
+      return true;
+    }
+    return false;
+  }
+
+  async addStream(
+    readable: Readable,
+    name: string,
+    blobId: string,
+    signal?: AbortSignal
+  ): Promise<ContextList | undefined> {
+    if (signal?.aborted) return;
+    const buffer = await this.readStream(readable, 50 * OneMB);
+    const file = new File([buffer], name);
+    return await this.addFile(file, blobId, signal);
+  }
+
+  async addFile(
+    file: File,
+    blobId: string,
+    signal?: AbortSignal
+  ): Promise<ContextList | undefined> {
+    const embeddings = await this.client.getFileEmbeddings(file, signal);
+    if (embeddings && !signal?.aborted) {
+      await this.insertEmbeddings(file.name, blobId, embeddings);
+      return this.sortedList;
+    }
+    return undefined;
+  }
+
+  async removeFile(fileId: string): Promise<boolean> {
+    return await this.db.$transaction(async tx => {
+      const ret = await tx.aiContextEmbedding.deleteMany({
+        where: { contextId: this.contextId, fileId },
+      });
+      this.config.files = this.config.files.filter(f => f.id !== fileId);
+      await this.save(tx);
+      return ret.count > 0;
+    });
+  }
+
+  async matchFileChunks(
+    content: string,
+    topK: number = 5,
+    signal?: AbortSignal
+  ): Promise<FileChunkSimilarity[]> {
+    const embedding = await this.client
+      .getEmbeddings([content], signal)
+      .then(r => r?.[0]?.embedding);
+    if (!embedding) return [];
+    return await this.db.$queryRaw<Array<FileChunkSimilarity>>`
+      SELECT "file_id" as "fileId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 
+      FROM "ai_context_embeddings"
+      ORDER BY "distance" ASC
+      LIMIT ${topK};
+    `;
+  }
+
+  async matchWorkspaceChunks(
+    content: string,
+    topK: number = 5,
+    signal?: AbortSignal
+  ): Promise<ChunkSimilarity[]> {
+    const embedding = await this.client
+      .getEmbeddings([content], signal)
+      .then(r => r?.[0]?.embedding);
+    if (!embedding) return [];
+    return await this.db.$queryRaw<Array<DocChunkSimilarity>>`
+      SELECT "doc_id" as "docId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 
+      FROM "ai_workspace_embeddings"
+      WHERE "workspace_id" = ${this.workspaceId}
+      ORDER BY "distance" ASC
+      LIMIT ${topK};
+    `;
   }
 
   private processEmbeddings(fileId: string, embeddings: Embedding[]) {
@@ -88,122 +213,6 @@ export class ContextSession implements AsyncDisposable {
       );
       return fileId;
     });
-  }
-
-  private readStream(
-    readable: Readable,
-    maxSize = 50 * OneMB
-  ): Promise<Buffer<ArrayBuffer>> {
-    return new Promise<Buffer<ArrayBuffer>>((resolve, reject) => {
-      const chunks: Uint8Array[] = [];
-      let totalSize = 0;
-
-      readable.on('data', chunk => {
-        totalSize += chunk.length;
-        if (totalSize > maxSize) {
-          reject(new BlobQuotaExceeded());
-          readable.destroy(new BlobQuotaExceeded());
-          return;
-        }
-        chunks.push(chunk);
-      });
-
-      readable.on('end', () => {
-        resolve(Buffer.concat(chunks, totalSize));
-      });
-
-      readable.on('error', err => {
-        reject(err);
-      });
-    });
-  }
-
-  async addDocRecord(docId: string) {
-    if (!this.config.docs.some(f => f.id === docId)) {
-      this.config.docs.push({ id: docId, createdAt: Date.now() });
-      await this.save();
-    }
-    return this.config.docs;
-  }
-
-  async removeDocRecord(docId: string) {
-    const index = this.config.docs.findIndex(f => f.id === docId);
-    if (index >= 0) {
-      this.config.docs.splice(index, 1);
-      await this.save();
-      return true;
-    }
-    return false;
-  }
-
-  async addStream(
-    readable: Readable,
-    name: string,
-    blobId: string,
-    signal?: AbortSignal
-  ): Promise<string | undefined> {
-    if (signal?.aborted) return;
-    const buffer = await this.readStream(readable, 50 * OneMB);
-    const file = new File([buffer], name);
-    return await this.addFile(file, blobId, signal);
-  }
-
-  async addFile(
-    file: File,
-    blobId: string,
-    signal?: AbortSignal
-  ): Promise<string | undefined> {
-    const embeddings = await this.client.getFileEmbeddings(file, signal);
-    if (embeddings && !signal?.aborted) {
-      return await this.insertEmbeddings(file.name, blobId, embeddings);
-    }
-    return undefined;
-  }
-
-  async removeFile(fileId: string) {
-    return await this.db.$transaction(async tx => {
-      const ret = await tx.aiContextEmbedding.deleteMany({
-        where: { contextId: this.contextId, fileId },
-      });
-      this.config.files = this.config.files.filter(f => f.id !== fileId);
-      await this.save(tx);
-      return ret.count > 0;
-    });
-  }
-
-  async matchFileChunks(
-    content: string,
-    topK: number = 5,
-    signal?: AbortSignal
-  ): Promise<FileChunkSimilarity[]> {
-    const embedding = await this.client
-      .getEmbeddings([content], signal)
-      .then(r => r?.[0]?.embedding);
-    if (!embedding) return [];
-    return await this.db.$queryRaw<Array<FileChunkSimilarity>>`
-      SELECT "file_id" as "fileId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 
-      FROM "ai_context_embeddings"
-      ORDER BY "distance" ASC
-      LIMIT ${topK};
-    `;
-  }
-
-  async matchWorkspaceChunks(
-    content: string,
-    topK: number = 5,
-    signal?: AbortSignal
-  ): Promise<ChunkSimilarity[]> {
-    const embedding = await this.client
-      .getEmbeddings([content], signal)
-      .then(r => r?.[0]?.embedding);
-    if (!embedding) return [];
-    return await this.db.$queryRaw<Array<DocChunkSimilarity>>`
-      SELECT "doc_id" as "docId", "chunk", "content", "embedding" <=> ${embedding}::vector as "distance" 
-      FROM "ai_workspace_embeddings"
-      WHERE "workspace_id" = ${this.workspaceId}
-      ORDER BY "distance" ASC
-      LIMIT ${topK};
-    `;
   }
 
   private async saveFileRecord(

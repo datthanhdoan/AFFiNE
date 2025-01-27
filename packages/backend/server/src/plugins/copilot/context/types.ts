@@ -46,6 +46,8 @@ export const ContextConfigSchema = z.object({
 export type ContextConfig = z.infer<typeof ContextConfigSchema>;
 export type ContextDoc = z.infer<typeof ContextConfigSchema>['docs'][number];
 export type ContextFile = z.infer<typeof ContextConfigSchema>['files'][number];
+export type ContextListItem = ContextDoc | ContextFile;
+export type ContextList = ContextListItem[];
 
 export type ChunkSimilarity = {
   chunk: number;

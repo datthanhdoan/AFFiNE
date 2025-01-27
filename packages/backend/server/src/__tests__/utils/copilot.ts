@@ -344,7 +344,7 @@ export async function addContextFile(
   blobId: string,
   fileName: string,
   content: Buffer
-): Promise<string> {
+): Promise<{ id: string }[]> {
   const res = await request(app.getHttpServer())
     .post(gql)
     .auth(userToken, { type: 'bearer' })
@@ -354,7 +354,9 @@ export async function addContextFile(
       JSON.stringify({
         query: `
           mutation addContextFile($options: AddContextFileInput!, $content: Upload!) {
-            addContextFile(content: $content, options: $options)
+            addContextFile(content: $content, options: $options) {
+              id
+            }
           }
         `,
         variables: {
