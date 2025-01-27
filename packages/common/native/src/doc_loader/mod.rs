@@ -1,19 +1,13 @@
 mod document;
-mod docx_loader;
-mod pdf_loader;
+mod loader;
+mod splitter;
+mod types;
 
-use async_trait::async_trait;
-use futures::{stream, Stream};
-use langchain_rust::{
-  document_loaders::{Loader, LoaderError},
-  text_splitter::TextSplitter,
+use loader::{
+  get_language_by_filename, DocxLoader, HtmlLoader, LanguageParserOptions, Loader, LoaderError,
+  PdfExtractLoader, SourceCodeLoader, TextLoader, Url,
 };
-use std::{
-  io::{Cursor, Read, Seek},
-  pin::Pin,
-};
-
-use docx_loader::DocxLoader;
-use pdf_loader::PdfExtractLoader;
+use splitter::{MarkdownSplitter, TextSplitter, TextSplitterError, TokenSplitter};
+use types::Document;
 
 pub use document::{Chunk, Doc};

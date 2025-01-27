@@ -1,14 +1,6 @@
 use super::*;
-use futures_util::StreamExt;
-use langchain_rust::{
-  document_loaders::{
-    get_language_by_filename, HtmlLoader, LanguageParserOptions, SourceCodeLoader, TextLoader,
-  },
-  text_splitter::{MarkdownSplitter, TokenSplitter},
-  url::Url,
-};
 use path_ext::PathExt;
-use std::path::PathBuf;
+use std::{io::Cursor, path::PathBuf};
 
 #[derive(Clone, Default)]
 pub struct Chunk {
@@ -99,21 +91,15 @@ impl Doc {
     loader: impl Loader,
     splitter: impl TextSplitter + 'static,
   ) -> Result<Vec<Chunk>, LoaderError> {
-    let docs = loader
-      .load_and_split(splitter)
-      .await?
-      .collect::<Vec<_>>()
-      .await;
+    let docs = loader.load_and_split(splitter).await?;
     Ok(
       docs
         .into_iter()
         .enumerate()
-        .filter_map(|(index, d)| {
-          d.ok().map(|d| Chunk {
-            index,
-            content: d.page_content,
-            ..Chunk::default()
-          })
+        .map(|(index, d)| Chunk {
+          index,
+          content: d.page_content,
+          ..Chunk::default()
         })
         .collect(),
     )

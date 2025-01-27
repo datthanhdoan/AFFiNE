@@ -1,5 +1,4 @@
 use super::*;
-use langchain_rust::schemas::Document;
 use pdf_extract::{output_doc, PlainTextOutput};
 
 #[derive(Debug, Clone)]
@@ -29,36 +28,16 @@ impl PdfExtractLoader {
   }
 }
 
-#[async_trait]
 impl Loader for PdfExtractLoader {
-  async fn load(
-    mut self,
-  ) -> Result<
-    Pin<Box<dyn Stream<Item = Result<Document, LoaderError>> + Send + 'static>>,
-    LoaderError,
-  > {
+  async fn load(self) -> Result<Vec<Document>, LoaderError> {
     let doc = self.extract_text_to_doc()?;
-    let stream = stream::iter(vec![Ok(doc)]);
-    Ok(Box::pin(stream))
-  }
-
-  async fn load_and_split<TS: TextSplitter + 'static>(
-    mut self,
-    splitter: TS,
-  ) -> Result<
-    Pin<Box<dyn Stream<Item = Result<Document, LoaderError>> + Send + 'static>>,
-    LoaderError,
-  > {
-    let doc = self.extract_text_to_doc()?;
-    let stream = splitter.split_documents(&[doc]).await?;
-    Ok(Box::pin(stream::iter(stream.into_iter().map(Ok))))
+    Ok(vec![doc])
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use futures_util::StreamExt;
   use std::{fs::read, io::Cursor, path::PathBuf};
 
   #[tokio::test]
@@ -69,15 +48,9 @@ mod tests {
     let reader = Cursor::new(buffer);
     let loader = PdfExtractLoader::new(reader).expect("Failed to create PdfExtractLoader");
 
-    let docs = loader
-      .load()
-      .await
-      .unwrap()
-      .map(|d| d.unwrap())
-      .collect::<Vec<_>>()
-      .await;
+    let docs = loader.load().await.unwrap();
 
-    assert_eq!(&docs[0].page_content[..100], "\n\nSample PDF\nThis is a simple PDF ﬁle. Fun fun fun.\n\nLorem ipsum dolor  sit amet,  consectetuer  a");
     assert_eq!(docs.len(), 1);
+    assert_eq!(&docs[0].page_content[..100], "\n\nSample PDF\nThis is a simple PDF ﬁle. Fun fun fun.\n\nLorem ipsum dolor  sit amet,  consectetuer  a");
   }
 }
