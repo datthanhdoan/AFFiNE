@@ -306,7 +306,12 @@ export async function listContext(
   userToken: string,
   workspaceId: string,
   sessionId: string
-): Promise<{ id: string }[]> {
+): Promise<
+  {
+    id: string;
+    createdAt: number;
+  }[]
+> {
   const res = await request(app.getHttpServer())
     .post(gql)
     .auth(userToken, { type: 'bearer' })
@@ -318,6 +323,7 @@ export async function listContext(
             copilot(workspaceId: "${workspaceId}") {
               contexts(sessionId: "${sessionId}") {
                 id
+                createdAt
               }
             }
           }
@@ -407,6 +413,7 @@ export async function listContextFiles(
       blobId: string;
       chunk_size: number;
       status: string;
+      createdAt: number;
     }[]
   | undefined
 > {
@@ -426,6 +433,7 @@ export async function listContextFiles(
                   blobId
                   chunk_size
                   status
+                  createdAt
                 }
               }
             }

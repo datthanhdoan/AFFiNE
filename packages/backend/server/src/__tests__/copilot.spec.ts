@@ -1294,8 +1294,8 @@ test('should be able to manage context', async t => {
   {
     const session = await context.create(chatSession);
 
-    const fileId = await session.add(file, randomUUID());
-    const list = await session.listFiles();
+    const fileId = await session.addFile(file, randomUUID());
+    const list = session.listFiles();
     t.deepEqual(
       list.map(f => f.chunk_size),
       [3],
@@ -1309,10 +1309,10 @@ test('should be able to manage context', async t => {
 
     const docId = randomUUID();
     await session.addDocRecord(randomUUID());
-    const docs = await session.listDocs();
+    const docs = session.listDocs();
     t.deepEqual(docs, [docId], 'should list doc id');
 
-    const result = await session.match('test', 2);
+    const result = await session.matchFileChunks('test', 2);
     t.is(result.length, 2, 'should match context');
     t.is(result[0].fileId, fileId!, 'should match file id');
   }

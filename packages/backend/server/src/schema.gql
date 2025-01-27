@@ -78,17 +78,25 @@ type Copilot {
 }
 
 type CopilotContext {
+  createdAt: SafeInt!
+
   """list files in context"""
-  docs(contextId: String): [String!]!
+  docs(contextId: String): [CopilotContextDoc!]!
 
   """list files in context"""
   files(contextId: String): [CopilotContextFile!]!
   id: ID!
 }
 
+type CopilotContextDoc {
+  createdAt: SafeInt!
+  id: ID!
+}
+
 type CopilotContextFile {
   blobId: String!
   chunk_size: SafeInt!
+  createdAt: SafeInt!
   id: ID!
   name: String!
   status: ContextFileStatus!

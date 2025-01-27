@@ -35,6 +35,7 @@ import { COPILOT_LOCKER, CopilotType } from '../resolver';
 import { ChatSessionService } from '../session';
 import { CopilotContextService } from './service';
 import {
+  ContextDoc,
   type ContextFile,
   ContextFileStatus,
   DocChunkSimilarity,
@@ -75,9 +76,21 @@ class RemoveContextFileInput {
 export class CopilotContextType {
   @Field(() => ID)
   id!: string;
+
+  @Field(() => SafeIntResolver)
+  createdAt!: number;
 }
 
 registerEnumType(ContextFileStatus, { name: 'ContextFileStatus' });
+
+@ObjectType()
+class CopilotContextDoc implements ContextDoc {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => SafeIntResolver)
+  createdAt!: number;
+}
 
 @ObjectType()
 class CopilotContextFile implements ContextFile {
@@ -95,6 +108,9 @@ class CopilotContextFile implements ContextFile {
 
   @Field(() => String)
   blobId!: string;
+
+  @Field(() => SafeIntResolver)
+  createdAt!: number;
 }
 
 @ObjectType()
@@ -252,17 +268,17 @@ export class CopilotContextResolver {
     return controller.signal;
   }
 
-  @ResolveField(() => [String], {
+  @ResolveField(() => [CopilotContextDoc], {
     description: 'list files in context',
   })
   @CallMetric('ai', 'context_file_list')
   async docs(
     @Parent() context: CopilotContextType,
     @Args('contextId', { nullable: true }) contextId?: string
-  ): Promise<string[]> {
+  ): Promise<ContextDoc[]> {
     const id = contextId || context.id;
     const session = await this.context.get(id);
-    return await session.listDocs();
+    return session.listDocs();
   }
 
   @Mutation(() => SafeIntResolver, {
@@ -325,7 +341,7 @@ export class CopilotContextResolver {
   ): Promise<CopilotContextFile[]> {
     const id = contextId || context.id;
     const session = await this.context.get(id);
-    return await session.listFiles();
+    return session.listFiles();
   }
 
   @Mutation(() => String, {
@@ -378,7 +394,7 @@ export class CopilotContextResolver {
     const session = await this.context.get(options.contextId);
 
     try {
-      return await session.remove(options.fileId);
+      return await session.removeFile(options.fileId);
     } catch (e: any) {
       throw new CopilotFailedToModifyContext({
         contextId: options.contextId,
@@ -406,7 +422,11 @@ export class CopilotContextResolver {
     const session = await this.context.get(contextId);
 
     try {
-      return await session.match(content, limit, this.getSignal(ctx.req));
+      return await session.matchFileChunks(
+        content,
+        limit,
+        this.getSignal(ctx.req)
+      );
     } catch (e: any) {
       throw new CopilotFailedToMatchContext({
         contextId,
@@ -433,7 +453,11 @@ export class CopilotContextResolver {
     await this.permissions.checkCloudWorkspace(session.workspaceId, user.id);
 
     try {
-      return await session.match(content, limit, this.getSignal(ctx.req));
+      return await session.matchFileChunks(
+        content,
+        limit,
+        this.getSignal(ctx.req)
+      );
     } catch (e: any) {
       throw new CopilotFailedToMatchContext({
         contextId,

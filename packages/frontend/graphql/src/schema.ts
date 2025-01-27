@@ -127,8 +127,9 @@ export interface CopilotHistoriesArgs {
 
 export interface CopilotContext {
   __typename?: 'CopilotContext';
+  createdAt: Scalars['SafeInt']['output'];
   /** list files in context */
-  docs: Array<Scalars['String']['output']>;
+  docs: Array<CopilotContextDoc>;
   /** list files in context */
   files: Array<CopilotContextFile>;
   id: Scalars['ID']['output'];
@@ -142,10 +143,17 @@ export interface CopilotContextFilesArgs {
   contextId?: InputMaybe<Scalars['String']['input']>;
 }
 
+export interface CopilotContextDoc {
+  __typename?: 'CopilotContextDoc';
+  createdAt: Scalars['SafeInt']['output'];
+  id: Scalars['ID']['output'];
+}
+
 export interface CopilotContextFile {
   __typename?: 'CopilotContextFile';
   blobId: Scalars['String']['output'];
   chunk_size: Scalars['SafeInt']['output'];
+  createdAt: Scalars['SafeInt']['output'];
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   status: ContextFileStatus;
@@ -368,6 +376,7 @@ export type ErrorDataUnion =
   | MemberNotFoundInSpaceDataType
   | MissingOauthQueryParameterDataType
   | NotInSpaceDataType
+  | QueryTooLongDataType
   | RuntimeConfigNotFoundDataType
   | SameSubscriptionRecurringDataType
   | SpaceAccessDeniedDataType
@@ -445,6 +454,7 @@ export enum ErrorNames {
   OAUTH_STATE_EXPIRED = 'OAUTH_STATE_EXPIRED',
   PAGE_IS_NOT_PUBLIC = 'PAGE_IS_NOT_PUBLIC',
   PASSWORD_REQUIRED = 'PASSWORD_REQUIRED',
+  QUERY_TOO_LONG = 'QUERY_TOO_LONG',
   RUNTIME_CONFIG_NOT_FOUND = 'RUNTIME_CONFIG_NOT_FOUND',
   SAME_EMAIL_PROVIDED = 'SAME_EMAIL_PROVIDED',
   SAME_SUBSCRIPTION_RECURRING = 'SAME_SUBSCRIPTION_RECURRING',
@@ -622,6 +632,15 @@ export interface InvoiceType {
   updatedAt: Scalars['DateTime']['output'];
 }
 
+export interface License {
+  __typename?: 'License';
+  expiredAt: Maybe<Scalars['DateTime']['output']>;
+  installedAt: Scalars['DateTime']['output'];
+  quantity: Scalars['Int']['output'];
+  recurring: SubscriptionRecurring;
+  validatedAt: Scalars['DateTime']['output'];
+}
+
 export interface LimitedUserType {
   __typename?: 'LimitedUserType';
   /** User email */
@@ -663,6 +682,7 @@ export interface MissingOauthQueryParameterDataType {
 export interface Mutation {
   __typename?: 'Mutation';
   acceptInviteById: Scalars['Boolean']['output'];
+  activateLicense: License;
   /** add a doc to context */
   addContextDoc: Scalars['SafeInt']['output'];
   /** add a file to context */
@@ -689,10 +709,12 @@ export interface Mutation {
   /** Create a stripe customer portal to manage payment methods */
   createCustomerPortal: Scalars['String']['output'];
   createInviteLink: InviteLink;
+  createSelfhostWorkspaceCustomerPortal: Scalars['String']['output'];
   /** Create a new user */
   createUser: UserType;
   /** Create a new workspace */
   createWorkspace: WorkspaceType;
+  deactivateLicense: Scalars['Boolean']['output'];
   deleteAccount: DeleteAccount;
   deleteBlob: Scalars['Boolean']['output'];
   /** Delete a user account */
@@ -760,6 +782,11 @@ export interface Mutation {
 export interface MutationAcceptInviteByIdArgs {
   inviteId: Scalars['String']['input'];
   sendAcceptMail?: InputMaybe<Scalars['Boolean']['input']>;
+  workspaceId: Scalars['String']['input'];
+}
+
+export interface MutationActivateLicenseArgs {
+  license: Scalars['String']['input'];
   workspaceId: Scalars['String']['input'];
 }
 
@@ -834,12 +861,20 @@ export interface MutationCreateInviteLinkArgs {
   workspaceId: Scalars['String']['input'];
 }
 
+export interface MutationCreateSelfhostWorkspaceCustomerPortalArgs {
+  workspaceId: Scalars['String']['input'];
+}
+
 export interface MutationCreateUserArgs {
   input: CreateUserInput;
 }
 
 export interface MutationCreateWorkspaceArgs {
   init?: InputMaybe<Scalars['Upload']['input']>;
+}
+
+export interface MutationDeactivateLicenseArgs {
+  workspaceId: Scalars['String']['input'];
 }
 
 export interface MutationDeleteBlobArgs {
@@ -1185,6 +1220,11 @@ export interface QueryChatHistoriesInput {
   sessionId?: InputMaybe<Scalars['String']['input']>;
   sessionOrder?: InputMaybe<ChatHistoryOrder>;
   skip?: InputMaybe<Scalars['Int']['input']>;
+}
+
+export interface QueryTooLongDataType {
+  __typename?: 'QueryTooLongDataType';
+  max: Scalars['Int']['output'];
 }
 
 export interface QuotaQueryType {
@@ -1559,6 +1599,8 @@ export interface WorkspaceType {
   /** Get user invoice count */
   invoiceCount: Scalars['Int']['output'];
   invoices: Array<InvoiceType>;
+  /** The selfhost license of the workspace */
+  license: Maybe<License>;
   /** member count of workspace */
   memberCount: Scalars['Int']['output'];
   /** Members of workspace */
@@ -1600,6 +1642,7 @@ export interface WorkspaceTypeInvoicesArgs {
 }
 
 export interface WorkspaceTypeMembersArgs {
+  query?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
   take?: InputMaybe<Scalars['Int']['input']>;
 }
@@ -1792,7 +1835,11 @@ export type ListContextFilesQuery = {
       __typename?: 'Copilot';
       contexts: Array<{
         __typename?: 'CopilotContext';
-        docs: Array<string>;
+        docs: Array<{
+          __typename?: 'CopilotContextDoc';
+          id: string;
+          createdAt: number;
+        }>;
         files: Array<{
           __typename?: 'CopilotContextFile';
           id: string;
@@ -1800,6 +1847,7 @@ export type ListContextFilesQuery = {
           blobId: string;
           chunk_size: number;
           status: ContextFileStatus;
+          createdAt: number;
         }>;
       }>;
     };
@@ -1843,7 +1891,11 @@ export type ListContextQuery = {
     __typename?: 'UserType';
     copilot: {
       __typename?: 'Copilot';
-      contexts: Array<{ __typename?: 'CopilotContext'; id: string }>;
+      contexts: Array<{
+        __typename?: 'CopilotContext';
+        id: string;
+        createdAt: number;
+      }>;
     };
   } | null;
 };

@@ -84,11 +84,14 @@ export class CopilotContextService {
     throw new CopilotInvalidContext({ contextId: id });
   }
 
-  async list(sessionId: string): Promise<{ id: string }[]> {
+  async list(sessionId: string): Promise<{ id: string; createdAt: number }[]> {
     const contexts = await this.db.aiContext.findMany({
       where: { sessionId },
-      select: { id: true },
+      select: { id: true, createdAt: true },
     });
-    return contexts;
+    return contexts.map(c => ({
+      id: c.id,
+      createdAt: c.createdAt.getTime(),
+    }));
   }
 }

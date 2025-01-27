@@ -6,13 +6,17 @@ query listContextFiles(
   currentUser {
     copilot(workspaceId: $workspaceId) {
       contexts(sessionId: $sessionId) {
-        docs(contextId: $contextId)
+        docs(contextId: $contextId) {
+          id
+          createdAt
+        }
         files(contextId: $contextId) {
           id
           name
           blobId
           chunk_size
           status
+          createdAt
         }
       }
     }

@@ -763,7 +763,11 @@ test('should be able to manage context', async t => {
     await t.notThrowsAsync(context, 'should create context with chat session');
 
     const list = await listContext(app, token, workspaceId, sessionId);
-    t.deepEqual(list, [{ id: await context }], 'should list context');
+    t.deepEqual(
+      list.map(f => ({ id: f.id })),
+      [{ id: await context }],
+      'should list context'
+    );
   }
 
   const fs = await import('node:fs');

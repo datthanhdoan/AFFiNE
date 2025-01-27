@@ -8,7 +8,9 @@ import { nanoid } from 'nanoid';
 import { BlobQuotaExceeded, PrismaTransaction } from '../../../base';
 import { OneMB } from '../../../core/quota/constant';
 import {
+  ChunkSimilarity,
   ContextConfig,
+  ContextDoc,
   ContextFile,
   ContextFileStatus,
   DocChunkSimilarity,
@@ -33,11 +35,11 @@ export class ContextSession implements AsyncDisposable {
     return this.config.workspaceId;
   }
 
-  async listDocs() {
+  listDocs(): ContextDoc[] {
     return [...this.config.docs];
   }
 
-  async listFiles() {
+  listFiles() {
     return this.config.files.map(f => ({ ...f }));
   }
 
@@ -65,6 +67,7 @@ export class ContextSession implements AsyncDisposable {
       blobId,
       chunk_size: embeddings.length,
       name,
+      createdAt: Date.now(),
     }));
 
     const values = this.processEmbeddings(fileId, embeddings);
@@ -116,15 +119,15 @@ export class ContextSession implements AsyncDisposable {
   }
 
   async addDocRecord(docId: string) {
-    if (!this.config.docs.includes(docId)) {
-      this.config.docs.push(docId);
+    if (!this.config.docs.some(f => f.id === docId)) {
+      this.config.docs.push({ id: docId, createdAt: Date.now() });
       await this.save();
     }
-    return this.config.docs.length;
+    return this.config.docs;
   }
 
   async removeDocRecord(docId: string) {
-    const index = this.config.docs.indexOf(docId);
+    const index = this.config.docs.findIndex(f => f.id === docId);
     if (index >= 0) {
       this.config.docs.splice(index, 1);
       await this.save();
@@ -142,10 +145,10 @@ export class ContextSession implements AsyncDisposable {
     if (signal?.aborted) return;
     const buffer = await this.readStream(readable, 50 * OneMB);
     const file = new File([buffer], name);
-    return await this.add(file, blobId, signal);
+    return await this.addFile(file, blobId, signal);
   }
 
-  async add(
+  async addFile(
     file: File,
     blobId: string,
     signal?: AbortSignal
@@ -157,7 +160,7 @@ export class ContextSession implements AsyncDisposable {
     return undefined;
   }
 
-  async remove(fileId: string) {
+  async removeFile(fileId: string) {
     return await this.db.$transaction(async tx => {
       const ret = await tx.aiContextEmbedding.deleteMany({
         where: { contextId: this.contextId, fileId },
@@ -168,7 +171,7 @@ export class ContextSession implements AsyncDisposable {
     });
   }
 
-  async match(
+  async matchFileChunks(
     content: string,
     topK: number = 5,
     signal?: AbortSignal
@@ -185,11 +188,11 @@ export class ContextSession implements AsyncDisposable {
     `;
   }
 
-  async matchWorkspace(
+  async matchWorkspaceChunks(
     content: string,
     topK: number = 5,
     signal?: AbortSignal
-  ) {
+  ): Promise<ChunkSimilarity[]> {
     const embedding = await this.client
       .getEmbeddings([content], signal)
       .then(r => r?.[0]?.embedding);

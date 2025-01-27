@@ -32,12 +32,19 @@ export const ContextConfigSchema = z.object({
         ContextFileStatus.failed,
       ]),
       blobId: z.string(),
+      createdAt: z.number(),
     })
     .array(),
-  docs: z.string().array(),
+  docs: z
+    .object({
+      id: z.string(),
+      createdAt: z.number(),
+    })
+    .array(),
 });
 
 export type ContextConfig = z.infer<typeof ContextConfigSchema>;
+export type ContextDoc = z.infer<typeof ContextConfigSchema>['docs'][number];
 export type ContextFile = z.infer<typeof ContextConfigSchema>['files'][number];
 
 export type ChunkSimilarity = {
