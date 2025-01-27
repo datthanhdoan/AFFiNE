@@ -250,9 +250,9 @@ export async function createCopilotContext(
     .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
     .send({
       query: `
-mutation {
-  createCopilotContext(workspaceId: "${workspaceId}", sessionId: "${sessionId}")
-}
+        mutation {
+          createCopilotContext(workspaceId: "${workspaceId}", sessionId: "${sessionId}")
+        }
       `,
     })
     .expect(200);
@@ -292,7 +292,7 @@ export async function matchContext(
           }
         }
       `,
-      variables: { options: { contextId, content, limit } },
+      variables: { contextId, content, limit },
     })
     .expect(200);
 
