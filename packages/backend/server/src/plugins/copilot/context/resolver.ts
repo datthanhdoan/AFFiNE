@@ -23,7 +23,7 @@ import {
   CopilotFailedToMatchContext,
   CopilotFailedToModifyContext,
   CopilotSessionNotFound,
-  EventEmitter,
+  EventBus,
   type FileUpload,
   RequestMutex,
   Throttle,
@@ -141,7 +141,7 @@ class ContextMatchedDocChunk implements DocChunkSimilarity {
 export class CopilotContextRootResolver {
   constructor(
     private readonly db: PrismaClient,
-    private readonly event: EventEmitter,
+    private readonly event: EventBus,
     private readonly mutex: RequestMutex,
     private readonly permissions: PermissionService,
     private readonly chatSession: ChatSessionService,
