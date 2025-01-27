@@ -1294,7 +1294,7 @@ test('should be able to manage context', async t => {
   {
     const session = await context.create(chatSession);
 
-    const fileId = await session.addFile(file, randomUUID());
+    const [{ id: fileId }] = (await session.addFile(file, randomUUID())) || [];
     const list = session.listFiles();
     t.deepEqual(
       list.map(f => f.chunk_size),
