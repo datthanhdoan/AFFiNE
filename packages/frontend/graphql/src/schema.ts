@@ -117,6 +117,7 @@ export interface Copilot {
 }
 
 export interface CopilotContextsArgs {
+  contextId?: InputMaybe<Scalars['String']['input']>;
   sessionId: Scalars['String']['input'];
 }
 
@@ -133,14 +134,6 @@ export interface CopilotContext {
   /** list files in context */
   files: Array<CopilotContextFile>;
   id: Scalars['ID']['output'];
-}
-
-export interface CopilotContextDocsArgs {
-  contextId?: InputMaybe<Scalars['String']['input']>;
-}
-
-export interface CopilotContextFilesArgs {
-  contextId?: InputMaybe<Scalars['String']['input']>;
 }
 
 export interface CopilotContextDoc {
@@ -684,7 +677,7 @@ export interface Mutation {
   acceptInviteById: Scalars['Boolean']['output'];
   activateLicense: License;
   /** add a doc to context */
-  addContextDoc: Scalars['SafeInt']['output'];
+  addContextDoc: Array<CopilotContextDoc>;
   /** add a file to context */
   addContextFile: Scalars['String']['output'];
   addWorkspaceFeature: Scalars['Int']['output'];
@@ -1799,7 +1792,11 @@ export type AddContextDocMutationVariables = Exact<{
 
 export type AddContextDocMutation = {
   __typename?: 'Mutation';
-  addContextDoc: number;
+  addContextDoc: Array<{
+    __typename?: 'CopilotContextDoc';
+    id: string;
+    createdAt: number;
+  }>;
 };
 
 export type RemoveContextDocMutationVariables = Exact<{

@@ -1,3 +1,6 @@
 mutation addContextDoc($options: AddContextDocInput!) {
-  addContextDoc(options: $options)
+  addContextDoc(options: $options) {
+    id
+    createdAt
+  }
 }

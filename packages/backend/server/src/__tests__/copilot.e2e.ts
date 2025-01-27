@@ -31,6 +31,7 @@ import {
   signUp,
 } from './utils';
 import {
+  addContextDoc,
   addContextFile,
   array2sse,
   chatWithImages,
@@ -737,7 +738,7 @@ test('should be able to search image from unsplash', async t => {
   t.not(resp.status, 404, 'route should be exists');
 });
 
-test('should be able to manage context', async t => {
+test.only('should be able to manage context', async t => {
   const { app, context } = t.context;
 
   const { id: workspaceId } = await createWorkspace(app, token);
@@ -791,13 +792,21 @@ test('should be able to manage context', async t => {
       'sample.pdf',
       buffer
     );
-    const [file] =
+    const [addedDoc] =
+      (await addContextDoc(app, token, contextId, randomUUID())) || [];
+
+    const { files, docs } =
       (await listContextFiles(app, token, workspaceId, sessionId, contextId)) ||
-      [];
+      {};
+    t.assert(files);
+    t.assert(docs);
+    const [file] = files!;
     t.is(file.id, fileId, 'should list file');
     t.is(file.status, 'finished', 'should list file status');
     t.is(file.name, 'sample.pdf', 'should list file name');
     t.is(file.chunk_size, 3, 'should split file into chunks');
+    const [doc] = docs!;
+    t.is(doc.id, addedDoc.id, 'should list doc');
 
     const result = (await matchContext(app, token, contextId, 'test', 2))!;
     t.is(result.length, 2, 'should match context');

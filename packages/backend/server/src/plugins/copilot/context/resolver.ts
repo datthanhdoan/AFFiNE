@@ -187,7 +187,8 @@ export class CopilotContextRootResolver {
   async contexts(
     @Parent() copilot: CopilotType,
     @CurrentUser() user: CurrentUser,
-    @Args('sessionId') sessionId: string
+    @Args('sessionId') sessionId: string,
+    @Args('contextId', { nullable: true }) contextId?: string
   ) {
     const lockFlag = `${COPILOT_LOCKER}:context:${sessionId}`;
     await using lock = await this.mutex.acquire(lockFlag);
@@ -196,6 +197,11 @@ export class CopilotContextRootResolver {
     }
     await this.checkChatSession(user, sessionId, copilot.workspaceId);
 
+    if (contextId) {
+      const context = await this.context.get(contextId);
+      if (context) return [context];
+      return [];
+    }
     return await this.context.list(sessionId);
   }
 
@@ -272,16 +278,12 @@ export class CopilotContextResolver {
     description: 'list files in context',
   })
   @CallMetric('ai', 'context_file_list')
-  async docs(
-    @Parent() context: CopilotContextType,
-    @Args('contextId', { nullable: true }) contextId?: string
-  ): Promise<ContextDoc[]> {
-    const id = contextId || context.id;
-    const session = await this.context.get(id);
+  async docs(@Parent() context: CopilotContextType): Promise<ContextDoc[]> {
+    const session = await this.context.get(context.id);
     return session.listDocs();
   }
 
-  @Mutation(() => SafeIntResolver, {
+  @Mutation(() => [CopilotContextDoc], {
     description: 'add a doc to context',
   })
   @CallMetric('ai', 'context_doc_add')
@@ -336,11 +338,9 @@ export class CopilotContextResolver {
   })
   @CallMetric('ai', 'context_file_list')
   async files(
-    @Parent() context: CopilotContextType,
-    @Args('contextId', { nullable: true }) contextId?: string
+    @Parent() context: CopilotContextType
   ): Promise<CopilotContextFile[]> {
-    const id = contextId || context.id;
-    const session = await this.context.get(id);
+    const session = await this.context.get(context.id);
     return session.listFiles();
   }
 

@@ -69,7 +69,7 @@ type Copilot {
   chats: [String!]!
 
   """Get the context list of a session"""
-  contexts(sessionId: String!): [CopilotContext!]!
+  contexts(contextId: String, sessionId: String!): [CopilotContext!]!
   histories(docId: String, options: QueryChatHistoriesInput): [CopilotHistories!]!
 
   """Get the quota of the user in the workspace"""
@@ -81,10 +81,10 @@ type CopilotContext {
   createdAt: SafeInt!
 
   """list files in context"""
-  docs(contextId: String): [CopilotContextDoc!]!
+  docs: [CopilotContextDoc!]!
 
   """list files in context"""
-  files(contextId: String): [CopilotContextFile!]!
+  files: [CopilotContextFile!]!
   id: ID!
 }
 
@@ -587,7 +587,7 @@ type Mutation {
   activateLicense(license: String!, workspaceId: String!): License!
 
   """add a doc to context"""
-  addContextDoc(options: AddContextDocInput!): SafeInt!
+  addContextDoc(options: AddContextDocInput!): [CopilotContextDoc!]!
 
   """add a file to context"""
   addContextFile(content: Upload!, options: AddContextFileInput!): String!

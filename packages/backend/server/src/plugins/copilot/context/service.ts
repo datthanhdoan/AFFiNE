@@ -58,7 +58,7 @@ export class CopilotContextService {
     const context = await this.db.aiContext.create({
       data: {
         sessionId,
-        config: { workspaceId: session.workspaceId, files: [] },
+        config: { workspaceId: session.workspaceId, docs: [], files: [] },
       },
     });
 

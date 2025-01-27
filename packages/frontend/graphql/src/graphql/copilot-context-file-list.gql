@@ -5,12 +5,12 @@ query listContextFiles(
 ) {
   currentUser {
     copilot(workspaceId: $workspaceId) {
-      contexts(sessionId: $sessionId) {
-        docs(contextId: $contextId) {
+      contexts(sessionId: $sessionId, contextId: $contextId) {
+        docs {
           id
           createdAt
         }
-        files(contextId: $contextId) {
+        files {
           id
           name
           blobId

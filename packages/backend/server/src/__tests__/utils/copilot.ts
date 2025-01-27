@@ -283,8 +283,8 @@ export async function matchContext(
     .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
     .send({
       query: `
-        mutation matchContext($options: MatchContextInput!) {
-          matchContext(options: $options) {
+        mutation matchContext($content: String!, $contextId: String!, $limit: SafeInt) {
+          matchContext(content: $content, contextId: $contextId, limit: $limit) {
             fileId
             chunk
             content
@@ -400,6 +400,58 @@ export async function removeContextFile(
   return res.body.data.removeContextFile;
 }
 
+export async function addContextDoc(
+  app: INestApplication,
+  userToken: string,
+  contextId: string,
+  docId: string
+): Promise<{ id: string }[]> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+          mutation addContextDoc($options: AddContextDocInput!) {
+            addContextDoc(options: $options) {
+              id
+            }
+          }
+        `,
+      variables: { options: { contextId, docId } },
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.addContextDoc;
+}
+
+export async function removeContextDoc(
+  app: INestApplication,
+  userToken: string,
+  contextId: string,
+  docId: string
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+        mutation removeContextDoc($options: RemoveContextFileInput!) {
+          removeContextDoc(options: $options)
+        }
+      `,
+      variables: { options: { contextId, docId } },
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.removeContextDoc;
+}
+
 export async function listContextFiles(
   app: INestApplication,
   userToken: string,
@@ -408,13 +460,19 @@ export async function listContextFiles(
   contextId: string
 ): Promise<
   | {
-      id: string;
-      name: string;
-      blobId: string;
-      chunk_size: number;
-      status: string;
-      createdAt: number;
-    }[]
+      docs: {
+        id: string;
+        createdAt: number;
+      }[];
+      files: {
+        id: string;
+        name: string;
+        blobId: string;
+        chunk_size: number;
+        status: string;
+        createdAt: number;
+      }[];
+    }
   | undefined
 > {
   const res = await request(app.getHttpServer())
@@ -426,8 +484,12 @@ export async function listContextFiles(
         query {
           currentUser {
             copilot(workspaceId: "${workspaceId}") {
-              contexts(sessionId: "${sessionId}") {
-                files(contextId: "${contextId}") {
+              contexts(sessionId: "${sessionId}", contextId: "${contextId}") {
+                docs {
+                  id
+                  createdAt
+                }
+                files {
                   id
                   name
                   blobId
@@ -445,7 +507,10 @@ export async function listContextFiles(
 
   handleGraphQLError(res);
 
-  return res.body.data.currentUser?.copilot?.contexts[0]?.files;
+  const { docs, files } =
+    res.body.data.currentUser?.copilot?.contexts?.[0] || {};
+
+  return { docs, files };
 }
 
 export async function createCopilotMessage(

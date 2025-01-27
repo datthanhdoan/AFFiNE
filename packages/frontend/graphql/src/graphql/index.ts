@@ -162,7 +162,10 @@ export const addContextDocMutation = {
   containsFile: false,
   query: `
 mutation addContextDoc($options: AddContextDocInput!) {
-  addContextDoc(options: $options)
+  addContextDoc(options: $options) {
+    id
+    createdAt
+  }
 }`,
 };
 
@@ -197,12 +200,12 @@ export const listContextFilesQuery = {
 query listContextFiles($workspaceId: String!, $sessionId: String!, $contextId: String!) {
   currentUser {
     copilot(workspaceId: $workspaceId) {
-      contexts(sessionId: $sessionId) {
-        docs(contextId: $contextId) {
+      contexts(sessionId: $sessionId, contextId: $contextId) {
+        docs {
           id
           createdAt
         }
-        files(contextId: $contextId) {
+        files {
           id
           name
           blobId
